@@ -1,0 +1,1314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Constellate</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<style>
+  html, body { margin:0; padding:0; background:#0a0b12; height:100%; overflow:hidden; }
+  #root { height:100dvh; width:100%; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useRef, useCallback } = React;
+
+
+/* ---------------------------------------------------------------
+   Constellate — a space to wander, capture, and connect thoughts.
+   Multi "user" support via named profiles stored in shared
+   persistent storage (no passwords — this is a POC, not an
+   auth system). Mobile-first, touch-friendly canvas.
+--------------------------------------------------------------- */
+
+const USERS_KEY = "constellate:users";
+const userKey = (name) => `constellate:user:${name.toLowerCase()}`;
+
+const DEFAULT_ACTIVITIES = [
+  { id: "look-up", name: "Look up", instruction: "Find the sky, even a sliver of it between buildings or branches. Notice what's happening up there right now." },
+  { id: "observe", name: "Observe", instruction: "Pick something ordinary nearby. Look at it longer than you normally would." },
+  { id: "walk", name: "Walk", instruction: "Walk somewhere familiar. Notice something you've never noticed before." },
+  { id: "listen", name: "Listen", instruction: "Close your eyes if you can. Notice every sound layered around you, near and far." },
+  { id: "daydream", name: "Daydream", instruction: "Let your mind go where it wants. Don't steer it anywhere." },
+  { id: "remember", name: "Remember", instruction: "Let a memory surface on its own. Follow it without deciding where it leads." },
+  { id: "imagine", name: "Imagine", instruction: "Picture something that doesn't exist yet. Stay with it a while." },
+];
+const DO_NOTHING = { id: "do-nothing", name: "Do nothing", instruction: "Put the phone down. Do absolutely nothing for a while." };
+const DIRECT = { id: "direct", name: "Direct capture", instruction: "" };
+
+const DURATIONS = [
+  { label: "5 min", value: 300 },
+  { label: "10 min", value: 600 },
+  { label: "20 min", value: 1200 },
+  { label: "No timer", value: null },
+];
+
+const emptyData = () => ({ stars: [], connections: [], constellations: [], customActivities: [] });
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
+const fmtDate = (d) => new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+const fmtClock = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+
+/* Storage: plain browser localStorage. Works on any static host —
+   no server or accounts required. Data lives only in this browser. */
+async function safeGet(key) {
+  try {
+    const v = localStorage.getItem(key);
+    return v;
+  } catch (e) {
+    return null;
+  }
+}
+async function safeSet(key, value) {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+/* ---------- geometry helpers for constellation boundaries ---------- */
+function convexHull(points) {
+  if (points.length < 3) return points;
+  const pts = [...points].sort((a, b) => a.x - b.x || a.y - b.y);
+  const cross = (o, a, b) => (a.x - o.x) * (b.y - o.y) - (a.y - o.y) * (b.x - o.x);
+  const lower = [];
+  for (const p of pts) {
+    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], p) <= 0) lower.pop();
+    lower.push(p);
+  }
+  const upper = [];
+  for (let i = pts.length - 1; i >= 0; i--) {
+    const p = pts[i];
+    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], p) <= 0) upper.pop();
+    upper.push(p);
+  }
+  upper.pop();
+  lower.pop();
+  return lower.concat(upper);
+}
+function smoothClosedPath(pts) {
+  const n = pts.length;
+  if (n < 3) return "";
+  let d = `M ${pts[0].x} ${pts[0].y} `;
+  for (let i = 0; i < n; i++) {
+    const p0 = pts[(i - 1 + n) % n], p1 = pts[i], p2 = pts[(i + 1) % n], p3 = pts[(i + 2) % n];
+    const c1x = p1.x + (p2.x - p0.x) / 6, c1y = p1.y + (p2.y - p0.y) / 6;
+    const c2x = p2.x - (p3.x - p1.x) / 6, c2y = p2.y - (p3.y - p1.y) / 6;
+    d += `C ${c1x} ${c1y}, ${c2x} ${c2y}, ${p2.x} ${p2.y} `;
+  }
+  return d + "Z";
+}
+function constellationBoundary(memberPts, padding = 46) {
+  if (memberPts.length === 0) return null;
+  if (memberPts.length === 1) {
+    const p = memberPts[0];
+    return { path: null, circle: { cx: p.x, cy: p.y, r: padding }, cx: p.x, cy: p.y };
+  }
+  if (memberPts.length === 2) {
+    const [a, b] = memberPts;
+    const cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const nx = -dy / len, ny = dx / len;
+    const pts = [
+      { x: a.x + nx * padding, y: a.y + ny * padding },
+      { x: b.x + nx * padding, y: b.y + ny * padding },
+      { x: b.x - nx * padding, y: b.y - ny * padding },
+      { x: a.x - nx * padding, y: a.y - ny * padding },
+    ];
+    return { path: smoothClosedPath(pts), cx, cy };
+  }
+  const cx = memberPts.reduce((s, p) => s + p.x, 0) / memberPts.length;
+  const cy = memberPts.reduce((s, p) => s + p.y, 0) / memberPts.length;
+  const hull = convexHull(memberPts);
+  const expanded = hull.map((p) => {
+    const dx = p.x - cx, dy = p.y - cy;
+    const len = Math.hypot(dx, dy) || 1;
+    return { x: p.x + (dx / len) * padding, y: p.y + (dy / len) * padding };
+  });
+  return { path: smoothClosedPath(expanded), cx, cy };
+}
+
+function ConstellateApp() {
+  const [screen, setScreen] = useState("login");
+  const [booting, setBooting] = useState(true);
+  const [usersList, setUsersList] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [data, setData] = useState(emptyData());
+  const [toast, setToast] = useState(null);
+
+  const [selectedActivity, setSelectedActivity] = useState(null);
+  const [selectedDuration, setSelectedDuration] = useState(null);
+  const [sessionSeconds, setSessionSeconds] = useState(null);
+
+  const [skyMode, setSkyMode] = useState("open");
+  const [linkFirst, setLinkFirst] = useState(null);
+  const [groupSelection, setGroupSelection] = useState([]);
+  const [openStarId, setOpenStarId] = useState(null);
+  const [openConstellationId, setOpenConstellationId] = useState(null);
+  const [showAddActivity, setShowAddActivity] = useState(false);
+  const [showConstellateModal, setShowConstellateModal] = useState(false);
+
+  useEffect(() => {
+    document.title = "Constellate";
+    if (!document.getElementById("constellate-fonts")) {
+      const link = document.createElement("link");
+      link.id = "constellate-fonts";
+      link.rel = "stylesheet";
+      link.href = "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap";
+      document.head.appendChild(link);
+    }
+    (async () => {
+      const raw = await safeGet(USERS_KEY);
+      setUsersList(raw ? JSON.parse(raw) : []);
+      setBooting(false);
+    })();
+  }, []);
+
+  function showToast(msg) {
+    setToast(msg);
+    window.clearTimeout(showToast._t);
+    showToast._t = window.setTimeout(() => setToast(null), 2200);
+  }
+
+  async function loginAs(name) {
+    name = name.trim();
+    if (!name) return;
+    let list = usersList;
+    if (!list.includes(name)) {
+      list = [...list, name];
+      setUsersList(list);
+      await safeSet(USERS_KEY, JSON.stringify(list));
+    }
+    const raw = await safeGet(userKey(name));
+    setData(raw ? JSON.parse(raw) : emptyData());
+    setCurrentUser(name);
+    setScreen("home");
+  }
+
+  function logout() {
+    setCurrentUser(null);
+    setData(emptyData());
+    setScreen("login");
+    setSkyMode("open");
+  }
+
+  const persist = useCallback(
+    (next) => {
+      setData(next);
+      if (currentUser) safeSet(userKey(currentUser), JSON.stringify(next));
+    },
+    [currentUser]
+  );
+
+  /* ---- star / connection / constellation mutations ---- */
+  function addStar({ name, content, activityName }) {
+    const jitter = () => Math.floor(Math.random() * 360 - 180);
+    const star = {
+      id: uid(),
+      name: name.trim() || "Untitled",
+      content: content.trim(),
+      activity: activityName || "Direct capture",
+      date: Date.now(),
+      x: jitter(),
+      y: jitter(),
+    };
+    persist({ ...data, stars: [...data.stars, star] });
+    return star;
+  }
+  function updateStar(id, patch) {
+    persist({ ...data, stars: data.stars.map((s) => (s.id === id ? { ...s, ...patch } : s)) });
+  }
+  function deleteStar(id) {
+    persist({
+      ...data,
+      stars: data.stars.filter((s) => s.id !== id),
+      connections: data.connections.filter((c) => c.source !== id && c.target !== id),
+      constellations: data.constellations
+        .map((c) => ({ ...c, members: c.members.filter((m) => m !== id) }))
+        .filter((c) => c.members.length > 0),
+    });
+  }
+  function addConnection(source, target) {
+    if (source === target) return;
+    const exists = data.connections.some(
+      (c) => (c.source === source && c.target === target) || (c.source === target && c.target === source)
+    );
+    if (exists) return showToast("Already connected");
+    persist({ ...data, connections: [...data.connections, { id: uid(), source, target }] });
+    showToast("Connected");
+  }
+  function removeConnection(id) {
+    persist({ ...data, connections: data.connections.filter((c) => c.id !== id) });
+    showToast("Connection removed");
+  }
+  function createConstellation(name, members) {
+    const c = { id: uid(), name: name.trim() || "Untitled constellation", members };
+    persist({ ...data, constellations: [...data.constellations, c] });
+    showToast("Constellation created");
+  }
+  function updateConstellation(id, patch) {
+    persist({ ...data, constellations: data.constellations.map((c) => (c.id === id ? { ...c, ...patch } : c)) });
+  }
+  function deleteConstellation(id) {
+    persist({ ...data, constellations: data.constellations.filter((c) => c.id !== id) });
+    setOpenConstellationId(null);
+  }
+  function addCustomActivity(name, instruction) {
+    const a = { id: uid(), name: name.trim(), instruction: instruction.trim() || "Follow it wherever it goes." };
+    persist({ ...data, customActivities: [...data.customActivities, a] });
+    return a;
+  }
+
+  /* ---- wander flow ---- */
+  function beginActivity(activity) {
+    setSelectedActivity(activity);
+    setSelectedDuration(null);
+    setScreen("activity");
+  }
+  function surpriseMe() {
+    const pool = [...DEFAULT_ACTIVITIES, DO_NOTHING, ...data.customActivities];
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    beginActivity(pick);
+  }
+  function startWander() {
+    setSessionSeconds(selectedDuration);
+    setScreen("wander");
+  }
+  function endWander() {
+    setScreen("return");
+  }
+
+  useEffect(() => {
+    if (screen !== "wander" || sessionSeconds === null) return;
+    if (sessionSeconds <= 0) {
+      setScreen("return");
+      return;
+    }
+    const t = setTimeout(() => setSessionSeconds((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [screen, sessionSeconds]);
+
+  /* ---------------------------- render ---------------------------- */
+  if (booting) {
+    return (
+      <Shell>
+        <Style />
+        <div className="loading">
+          <div className="pulse-star">✦</div>
+          <p>Finding your sky…</p>
+        </div>
+      </Shell>
+    );
+  }
+
+  return (
+    <Shell full={screen === "sky"}>
+      <Style />
+      {toast && <div className="toast">{toast}</div>}
+
+      {screen === "login" && <LoginScreen usersList={usersList} onLogin={loginAs} />}
+
+      {screen === "home" && currentUser && (
+        <HomeScreen
+          user={currentUser}
+          starCount={data.stars.length}
+          onWander={() => setScreen("compass")}
+          onSky={() => setScreen("sky")}
+          onLogout={logout}
+        />
+      )}
+
+      {screen === "compass" && (
+        <CompassScreen
+          customActivities={data.customActivities}
+          onPick={beginActivity}
+          onSurprise={surpriseMe}
+          onHome={() => setScreen("home")}
+          onAddActivity={() => setShowAddActivity(true)}
+        />
+      )}
+
+      {screen === "activity" && selectedActivity && (
+        <ActivityScreen
+          activity={selectedActivity}
+          selectedDuration={selectedDuration}
+          onSelectDuration={setSelectedDuration}
+          onBegin={startWander}
+          onBack={() => setScreen("compass")}
+        />
+      )}
+
+      {screen === "wander" && selectedActivity && (
+        <WanderScreen
+          activity={selectedActivity}
+          seconds={sessionSeconds}
+          hasTimer={selectedDuration !== null}
+          onDone={endWander}
+        />
+      )}
+
+      {screen === "return" && (
+        <ReturnScreen
+          onMakeStar={() => setScreen("createStar")}
+          onNothing={() => {
+            showToast("That's alright. Wander again anytime.");
+            setScreen("home");
+          }}
+        />
+      )}
+
+      {screen === "createStar" && (
+        <CreateStarScreen
+          activityName={selectedActivity ? selectedActivity.name : null}
+          onCancel={() => setScreen(selectedActivity ? "return" : "sky")}
+          onSave={(name, content) => {
+            addStar({ name, content, activityName: selectedActivity ? selectedActivity.name : "Direct capture" });
+            setSelectedActivity(null);
+            showToast("Star saved");
+            setScreen("sky");
+          }}
+        />
+      )}
+
+      {screen === "sky" && currentUser && (
+        <SkyScreen
+          data={data}
+          mode={skyMode}
+          setMode={(m) => {
+            setSkyMode(m);
+            setLinkFirst(null);
+            setGroupSelection([]);
+          }}
+          linkFirst={linkFirst}
+          setLinkFirst={setLinkFirst}
+          groupSelection={groupSelection}
+          setGroupSelection={setGroupSelection}
+          onOpenStar={setOpenStarId}
+          onOpenConstellation={setOpenConstellationId}
+          onMoveStar={(id, x, y) => updateStar(id, { x, y })}
+          onLink={addConnection}
+          onRemoveConnection={removeConnection}
+          onHome={() => setScreen("home")}
+          onNewStar={() => {
+            setSelectedActivity(null);
+            setScreen("createStar");
+          }}
+          onConstellate={() => setShowConstellateModal(true)}
+        />
+      )}
+
+      {openStarId && (
+        <StarModal
+          star={data.stars.find((s) => s.id === openStarId)}
+          onClose={() => setOpenStarId(null)}
+          onRename={(name) => updateStar(openStarId, { name })}
+          onEdit={(content) => updateStar(openStarId, { content })}
+          onDelete={() => {
+            deleteStar(openStarId);
+            setOpenStarId(null);
+            showToast("Star removed from your sky");
+          }}
+          onLinkFromHere={() => {
+            setSkyMode("link");
+            setLinkFirst(openStarId);
+            setOpenStarId(null);
+          }}
+        />
+      )}
+
+      {openConstellationId && (
+        <ConstellationModal
+          constellation={data.constellations.find((c) => c.id === openConstellationId)}
+          stars={data.stars}
+          onClose={() => setOpenConstellationId(null)}
+          onRename={(name) => updateConstellation(openConstellationId, { name })}
+          onRemoveStar={(starId) => {
+            const c = data.constellations.find((c) => c.id === openConstellationId);
+            const members = c.members.filter((m) => m !== starId);
+            if (members.length === 0) deleteConstellation(openConstellationId);
+            else updateConstellation(openConstellationId, { members });
+          }}
+          onOpenStar={(id) => {
+            setOpenConstellationId(null);
+            setOpenStarId(id);
+          }}
+          onDelete={() => deleteConstellation(openConstellationId)}
+        />
+      )}
+
+      {showAddActivity && (
+        <AddActivityModal
+          onClose={() => setShowAddActivity(false)}
+          onAdd={(name, instruction) => {
+            const a = addCustomActivity(name, instruction);
+            setShowAddActivity(false);
+            beginActivity(a);
+          }}
+        />
+      )}
+
+      {showConstellateModal && (
+        <NamePromptModal
+          title="What do these make you think of together?"
+          placeholder="Name this constellation"
+          confirmLabel="Constellate"
+          onClose={() => setShowConstellateModal(false)}
+          onConfirm={(name) => {
+            createConstellation(name, groupSelection);
+            setGroupSelection([]);
+            setShowConstellateModal(false);
+            setSkyMode("open");
+          }}
+        />
+      )}
+    </Shell>
+  );
+}
+
+/* ============================== Shell / Style ============================== */
+
+function Shell({ children, full }) {
+  return (
+    <div className={`constellate-root${full ? " full" : ""}`}>
+      <BackgroundSky />
+      <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", flex: 1, minHeight: 0, width: "100%" }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function BackgroundSky() {
+  const stars = React.useMemo(
+    () =>
+      Array.from({ length: 140 }).map(() => ({
+        x: Math.random() * 100,
+        y: Math.random() * 100,
+        r: Math.random() * 1.3 + 0.35,
+        delay: Math.random() * 8,
+        dur: 3.5 + Math.random() * 5,
+        op: 0.25 + Math.random() * 0.55,
+      })),
+    []
+  );
+  return (
+    <div className="bg-layer" aria-hidden="true">
+      <div className="bg-nebula bg-nebula-a" />
+      <div className="bg-nebula bg-nebula-b" />
+      <div className="bg-nebula bg-nebula-c" />
+      <svg className="bg-stars" preserveAspectRatio="none">
+        {stars.map((s, i) => (
+          <circle
+            key={i}
+            cx={`${s.x}%`}
+            cy={`${s.y}%`}
+            r={s.r}
+            fill="#f4efe4"
+            style={{
+              opacity: s.op,
+              animation: `twinkle ${s.dur}s ease-in-out ${s.delay}s infinite`,
+            }}
+          />
+        ))}
+      </svg>
+    </div>
+  );
+}
+
+function Style() {
+  return (
+    <style>{`
+      .constellate-root {
+        --void: #0a0b12;
+        --void-soft: #12141f;
+        --panel: #171a2b;
+        --star: #f4efe4;
+        --star-dim: #8890a6;
+        --gold: #c9a868;
+        --gold-soft: rgba(201,168,104,0.16);
+        --line: #545e86;
+        --text: #e7e5dd;
+        --text-muted: #8890a6;
+        --danger: #c97b6b;
+        --font-display: 'Fraunces', Georgia, serif;
+        --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+
+        background: radial-gradient(ellipse 120% 70% at 50% -10%, #1c2040 0%, #12142380 42%, var(--void) 78%);
+        color: var(--text);
+        font-family: var(--font-body);
+        min-height: 100dvh;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        overflow: hidden;
+        box-sizing: border-box;
+      }
+
+      .bg-layer { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+      .bg-stars { position: absolute; inset: 0; width: 100%; height: 100%; }
+      @keyframes twinkle { 0%, 100% { opacity: 0.15; } 50% { opacity: 1; } }
+
+      .bg-nebula {
+        position: absolute; border-radius: 50%; filter: blur(60px);
+        opacity: 0.4; mix-blend-mode: screen;
+      }
+      .bg-nebula-a {
+        width: 62vmax; height: 62vmax; top: -18vmax; left: -14vmax;
+        background: radial-gradient(circle, #3a3577 0%, transparent 70%);
+        animation: drift-a 46s ease-in-out infinite alternate;
+      }
+      .bg-nebula-b {
+        width: 54vmax; height: 54vmax; bottom: -20vmax; right: -16vmax;
+        background: radial-gradient(circle, #2c4a63 0%, transparent 70%);
+        animation: drift-b 58s ease-in-out infinite alternate;
+      }
+      .bg-nebula-c {
+        width: 44vmax; height: 44vmax; top: 32%; left: 58%;
+        background: radial-gradient(circle, #4a3160 0%, transparent 72%);
+        animation: drift-c 52s ease-in-out infinite alternate;
+      }
+      @keyframes drift-a { from { transform: translate(0,0) scale(1); } to { transform: translate(4vmax,3vmax) scale(1.08); } }
+      @keyframes drift-b { from { transform: translate(0,0) scale(1); } to { transform: translate(-3vmax,-4vmax) scale(1.06); } }
+      @keyframes drift-c { from { transform: translate(0,0) scale(1); } to { transform: translate(-3vmax,3vmax) scale(0.94); } }
+      @media (prefers-reduced-motion: reduce) {
+        .bg-nebula, .bg-stars circle { animation: none !important; }
+      }
+      .constellate-root * { box-sizing: border-box; }
+      .constellate-root button, .constellate-root input, .constellate-root textarea {
+        font-family: inherit; color: inherit;
+      }
+      .constellate-root button {
+        background: none; border: none; cursor: pointer; -webkit-tap-highlight-color: transparent;
+      }
+      .constellate-root button:focus-visible,
+      .constellate-root input:focus-visible,
+      .constellate-root textarea:focus-visible {
+        outline: 2px solid var(--gold); outline-offset: 3px; border-radius: 2px;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .constellate-root * { animation: none !important; transition: none !important; }
+      }
+
+      .column {
+        max-width: 420px;
+        margin: 0 auto;
+        min-height: 100dvh;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 32px 24px 40px;
+        gap: 24px;
+        animation: fade-in .5s ease both;
+      }
+      @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+
+      .kicker { font-size: 13px; color: var(--text-muted); letter-spacing: 0.02em; }
+      h1.display { font-family: var(--font-display); font-weight: 500; font-size: 34px; line-height: 1.15; margin: 0; color: var(--star); }
+      h2.display { font-family: var(--font-display); font-weight: 500; font-size: 24px; line-height: 1.25; margin: 0; color: var(--star); }
+      p.body { font-size: 16px; line-height: 1.6; color: var(--text); margin: 0; }
+      p.muted { font-size: 14px; line-height: 1.6; color: var(--text-muted); margin: 0; }
+
+      .bracket-btn {
+        font-family: var(--font-body); font-size: 15px; font-weight: 500;
+        color: var(--star); padding: 13px 22px; border: 1px solid rgba(244,239,228,0.28);
+        border-radius: 999px; transition: border-color .2s, background .2s;
+        min-height: 46px;
+      }
+      .bracket-btn:hover { border-color: var(--gold); }
+      .bracket-btn.primary { background: var(--gold-soft); border-color: var(--gold); color: var(--gold); }
+      .bracket-btn.primary:hover { background: rgba(201,168,104,0.26); }
+      .bracket-btn.danger { border-color: rgba(201,123,107,0.5); color: var(--danger); }
+      .bracket-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+      .text-link {
+        font-size: 14px; color: var(--text-muted); text-decoration: underline;
+        text-underline-offset: 3px; text-decoration-color: rgba(136,144,166,0.4);
+        padding: 8px 2px;
+      }
+      .text-link:hover { color: var(--star); text-decoration-color: var(--gold); }
+
+      input.field, textarea.field {
+        width: 100%; background: transparent; border: none; border-bottom: 1px solid rgba(244,239,228,0.22);
+        padding: 10px 2px; font-size: 17px; color: var(--star); resize: none;
+      }
+      input.field::placeholder, textarea.field::placeholder { color: var(--text-muted); }
+      input.field:focus, textarea.field:focus { border-bottom-color: var(--gold); outline: none; }
+
+      .loading { margin: auto; text-align: center; color: var(--text-muted); }
+      .pulse-star { font-size: 28px; color: var(--gold); animation: pulse 1.8s ease-in-out infinite; }
+      @keyframes pulse { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
+
+      .toast {
+        position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%);
+        background: var(--panel); border: 1px solid rgba(201,168,104,0.35);
+        color: var(--star); font-size: 14px; padding: 11px 20px; border-radius: 999px;
+        z-index: 200; animation: fade-in .25s ease both;
+      }
+
+      /* ---- login ---- */
+      .user-chip-row { display: flex; flex-wrap: wrap; gap: 10px; }
+      .user-chip {
+        border: 1px solid rgba(244,239,228,0.22); border-radius: 999px; padding: 10px 18px;
+        font-size: 14px; color: var(--star-dim);
+      }
+      .user-chip:hover { border-color: var(--gold); color: var(--star); }
+
+      /* ---- compass ---- */
+      .compass-wrap { display: flex; flex-direction: column; align-items: center; gap: 22px; }
+      .compass-wheel { position: relative; width: min(84vw, 340px); aspect-ratio: 1; margin: 8px 0; }
+      .compass-center {
+        position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+        color: var(--gold); font-size: 20px; opacity: 0.85;
+      }
+      .compass-node {
+        position: absolute; transform: translate(-50%,-50%);
+        width: 84px; height: 84px; border-radius: 50%;
+        border: 1px solid rgba(244,239,228,0.22);
+        display: flex; align-items: center; justify-content: center; text-align: center;
+        font-size: 13.5px; color: var(--star-dim); padding: 6px;
+        transition: border-color .2s, color .2s, background .2s;
+        background: rgba(23,26,43,0.4);
+      }
+      .compass-node:hover { border-color: var(--gold); color: var(--star); background: var(--gold-soft); }
+      .compass-extra-row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; max-width: 380px; }
+      .compass-chip {
+        border: 1px solid rgba(244,239,228,0.18); border-radius: 999px; padding: 8px 14px;
+        font-size: 13px; color: var(--star-dim);
+      }
+      .compass-chip:hover { border-color: var(--gold); color: var(--star); }
+      .compass-links { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+
+      /* ---- wander screen ---- */
+      .wander-screen {
+        min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        gap: 36px; padding: 32px; text-align: center;
+      }
+      .wander-clock { font-family: var(--font-display); font-size: 42px; color: var(--star-dim); letter-spacing: 0.02em; }
+      .wander-word { font-family: var(--font-display); font-size: 26px; color: var(--star); }
+
+      .duration-row { display: flex; flex-wrap: wrap; gap: 10px; }
+      .duration-btn {
+        border: 1px solid rgba(244,239,228,0.22); border-radius: 999px; padding: 9px 16px; font-size: 14px; color: var(--star-dim);
+      }
+      .duration-btn.active { border-color: var(--gold); color: var(--gold); background: var(--gold-soft); }
+
+      /* ---- home ---- */
+      .home-actions { display: flex; flex-direction: column; gap: 12px; }
+      .home-actions .bracket-btn { width: 100%; text-align: center; }
+
+      /* ---- sky ---- */
+      .full { padding: 0; }
+      .sky-screen { position: relative; width: 100%; height: 100dvh; display: flex; flex-direction: column; }
+      .sky-topbar {
+        display: flex; align-items: center; justify-content: space-between; gap: 8px;
+        padding: 14px 16px; z-index: 20; background: linear-gradient(to bottom, rgba(10,11,18,0.92), rgba(10,11,18,0));
+        position: absolute; top: 0; left: 0; right: 0;
+      }
+      .sky-modes { display: flex; gap: 4px; background: rgba(23,26,43,0.7); border: 1px solid rgba(244,239,228,0.14); border-radius: 999px; padding: 3px; }
+      .sky-mode-btn { font-size: 12.5px; padding: 7px 11px; border-radius: 999px; color: var(--text-muted); }
+      .sky-mode-btn.active { background: var(--gold-soft); color: var(--gold); }
+      .sky-hint {
+        position: absolute; top: 62px; left: 0; right: 0; text-align: center; z-index: 15;
+        font-size: 12.5px; color: var(--text-muted); pointer-events: none; padding: 0 20px;
+      }
+      .sky-canvas { flex: 1; touch-action: none; width: 100%; height: 100%; }
+      .sky-zoom { position: absolute; bottom: 24px; right: 16px; display: flex; flex-direction: column; gap: 8px; z-index: 20; }
+      .zoom-btn {
+        width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(244,239,228,0.2);
+        background: rgba(23,26,43,0.75); color: var(--star-dim); font-size: 18px;
+      }
+      .sky-empty {
+        position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        gap: 16px; text-align: center; padding: 32px; pointer-events: none;
+      }
+      .sky-empty .bracket-btn { pointer-events: all; }
+      .constellate-fab {
+        position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 25;
+      }
+
+      /* ---- modals ---- */
+      .modal-backdrop {
+        position: fixed; inset: 0; background: rgba(6,7,12,0.72); z-index: 100;
+        display: flex; align-items: flex-end; justify-content: center;
+        animation: fade-in .2s ease both;
+      }
+      @media (min-width: 560px) { .modal-backdrop { align-items: center; } }
+      .modal-sheet {
+        background: var(--panel); border: 1px solid rgba(244,239,228,0.1); border-bottom: none;
+        border-radius: 20px 20px 0 0; width: 100%; max-width: 460px; padding: 26px 24px 32px;
+        display: flex; flex-direction: column; gap: 16px; max-height: 86dvh; overflow-y: auto;
+        animation: rise .25s ease both;
+      }
+      @media (min-width: 560px) { .modal-sheet { border-radius: 20px; border-bottom: 1px solid rgba(244,239,228,0.1); } }
+      @keyframes rise { from { transform: translateY(24px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+      .modal-row { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+      .modal-meta { font-size: 12.5px; color: var(--text-muted); }
+      .member-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px solid rgba(244,239,228,0.08); }
+      .member-row button.name-btn { font-size: 14.5px; color: var(--text); text-align: left; }
+      .member-row button.name-btn:hover { color: var(--gold); }
+      .x-btn { color: var(--text-muted); font-size: 13px; }
+      .x-btn:hover { color: var(--danger); }
+    `}</style>
+  );
+}
+
+/* ============================== Screens ============================== */
+
+function LoginScreen({ usersList, onLogin }) {
+  const [name, setName] = useState("");
+  return (
+    <div className="column">
+      <div className="kicker">Constellate</div>
+      <h1 className="display">Wander freely.
+Connect unexpectedly.</h1>
+      <p className="body">A quiet space for thoughts that usually disappear. Enter a name to open your sky, or start a new one.</p>
+      <p className="muted">Your sky is saved in this browser only — it won't follow you to another device.</p>
+
+      {usersList.length > 0 && (
+        <div className="user-chip-row">
+          {usersList.map((u) => (
+            <button key={u} className="user-chip" onClick={() => onLogin(u)}>
+              {u}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <input
+          className="field"
+          placeholder="Your name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && onLogin(name)}
+        />
+        <button className="bracket-btn primary" style={{ alignSelf: "flex-start" }} onClick={() => onLogin(name)} disabled={!name.trim()}>
+          [ Enter ]
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function HomeScreen({ user, starCount, onWander, onSky, onLogout }) {
+  return (
+    <div className="column">
+      <div className="kicker">{starCount > 0 ? "Welcome back" : "Welcome"}</div>
+      <h1 className="display">{user}</h1>
+      <p className="muted">
+        {starCount > 0
+          ? `Your sky holds ${starCount} star${starCount === 1 ? "" : "s"}.`
+          : "Your sky is still empty. Wander a while and see what emerges."}
+      </p>
+      <div className="home-actions">
+        <button className="bracket-btn primary" onClick={onWander}>[ Wander ]</button>
+        <button className="bracket-btn" onClick={onSky}>[ My sky ]</button>
+      </div>
+      <button className="text-link" style={{ alignSelf: "flex-start" }} onClick={onLogout}>
+        Not {user}? Switch profile
+      </button>
+    </div>
+  );
+}
+
+function CompassScreen({ customActivities, onPick, onSurprise, onHome, onAddActivity }) {
+  const n = DEFAULT_ACTIVITIES.length;
+  return (
+    <div className="column">
+      <button className="text-link" style={{ alignSelf: "flex-start" }} onClick={onHome}>← Home</button>
+      <h2 className="display" style={{ textAlign: "center" }}>Where do you want to wander?</h2>
+      <div className="compass-wrap">
+        <div className="compass-wheel">
+          <div className="compass-center">✦</div>
+          {DEFAULT_ACTIVITIES.map((a, i) => {
+            const angle = (-90 + (360 / n) * i) * (Math.PI / 180);
+            const r = 38;
+            const left = 50 + r * Math.cos(angle);
+            const top = 50 + r * Math.sin(angle);
+            return (
+              <button
+                key={a.id}
+                className="compass-node"
+                style={{ left: `${left}%`, top: `${top}%` }}
+                onClick={() => onPick(a)}
+              >
+                {a.name}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="compass-links">
+          <button className="text-link" onClick={() => onPick(DO_NOTHING)}>Do nothing</button>
+          <button className="text-link" onClick={onSurprise}>✨ Surprise me</button>
+          <button className="text-link" onClick={onAddActivity}>+ Add your own</button>
+        </div>
+
+        {customActivities.length > 0 && (
+          <div className="compass-extra-row">
+            {customActivities.map((a) => (
+              <button key={a.id} className="compass-chip" onClick={() => onPick(a)}>
+                {a.name}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ActivityScreen({ activity, selectedDuration, onSelectDuration, onBegin, onBack }) {
+  return (
+    <div className="column">
+      <button className="text-link" style={{ alignSelf: "flex-start" }} onClick={onBack}>← Choose differently</button>
+      <div className="kicker">{activity.name}</div>
+      <p className="body" style={{ fontSize: 18 }}>{activity.instruction}</p>
+
+      <div>
+        <p className="muted" style={{ marginBottom: 10 }}>How long?</p>
+        <div className="duration-row">
+          {DURATIONS.map((d) => (
+            <button
+              key={d.label}
+              className={`duration-btn${selectedDuration === d.value ? " active" : ""}`}
+              onClick={() => onSelectDuration(d.value)}
+            >
+              {d.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <button className="bracket-btn primary" style={{ alignSelf: "flex-start" }} onClick={onBegin}>
+        [ Begin wandering ]
+      </button>
+    </div>
+  );
+}
+
+function WanderScreen({ activity, seconds, hasTimer, onDone }) {
+  return (
+    <div className="wander-screen">
+      {hasTimer ? <div className="wander-clock">{fmtClock(seconds)}</div> : <div className="wander-word">{activity.name}.</div>}
+      <p className="muted">Wander.</p>
+      <button className="bracket-btn" onClick={onDone}>[ I'm back ]</button>
+    </div>
+  );
+}
+
+function ReturnScreen({ onMakeStar, onNothing }) {
+  return (
+    <div className="column" style={{ textAlign: "center", alignItems: "center" }}>
+      <h2 className="display">Did something catch your mind?</h2>
+      <div style={{ display: "flex", flexDirection: "column", gap: 12, width: "100%" }}>
+        <button className="bracket-btn primary" onClick={onMakeStar}>✦ Make a star</button>
+        <button className="bracket-btn" onClick={onNothing}>Nothing this time</button>
+      </div>
+    </div>
+  );
+}
+
+function CreateStarScreen({ activityName, onCancel, onSave }) {
+  const [content, setContent] = useState("");
+  const [name, setName] = useState("");
+  return (
+    <div className="column">
+      <button className="text-link" style={{ alignSelf: "flex-start" }} onClick={onCancel}>← Back</button>
+      <h2 className="display">What did you find?</h2>
+      <textarea
+        className="field"
+        rows={4}
+        autoFocus
+        placeholder="Your thought, question, or observation…"
+        value={content}
+        onChange={(e) => setContent(e.target.value)}
+      />
+      <input
+        className="field"
+        placeholder="Name your star (optional)"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+      />
+      <p className="modal-meta">
+        {activityName ? `Wandered: ${activityName} · ${fmtDate(Date.now())}` : `Captured directly · ${fmtDate(Date.now())}`}
+      </p>
+      <button className="bracket-btn primary" style={{ alignSelf: "flex-start" }} disabled={!content.trim()} onClick={() => onSave(name, content)}>
+        [ Save star ]
+      </button>
+    </div>
+  );
+}
+
+/* ============================== Sky ============================== */
+
+function SkyScreen({
+  data, mode, setMode, linkFirst, setLinkFirst, groupSelection, setGroupSelection,
+  onOpenStar, onOpenConstellation, onMoveStar, onLink, onRemoveConnection,
+  onHome, onNewStar, onConstellate,
+}) {
+  const svgRef = useRef(null);
+  const [view, setView] = useState({ scale: 1, tx: 0, ty: 0 });
+  const pointers = useRef(new Map());
+  const dragState = useRef(null);
+  const starDrag = useRef(null);
+
+  useEffect(() => {
+    const el = svgRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    setView((v) => ({ ...v, tx: rect.width / 2, ty: rect.height / 2 }));
+  }, []);
+
+  function toVirtual(clientX, clientY) {
+    const rect = svgRef.current.getBoundingClientRect();
+    return { x: (clientX - rect.left - view.tx) / view.scale, y: (clientY - rect.top - view.ty) / view.scale };
+  }
+
+  function bgPointerDown(e) {
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.current.size === 1) {
+      dragState.current = { type: "pan", startX: e.clientX, startY: e.clientY, startTx: view.tx, startTy: view.ty };
+    } else if (pointers.current.size === 2) {
+      const pts = Array.from(pointers.current.values());
+      const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      dragState.current = { type: "pinch", startDist: dist, startScale: view.scale };
+    }
+  }
+  function bgPointerMove(e) {
+    if (starDrag.current && starDrag.current.pointerId === e.pointerId) {
+      const v = toVirtual(e.clientX, e.clientY);
+      onMoveStar(starDrag.current.id, v.x, v.y);
+      return;
+    }
+    if (!pointers.current.has(e.pointerId)) return;
+    pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (dragState.current?.type === "pan" && pointers.current.size === 1) {
+      const dx = e.clientX - dragState.current.startX;
+      const dy = e.clientY - dragState.current.startY;
+      setView((v) => ({ ...v, tx: dragState.current.startTx + dx, ty: dragState.current.startTy + dy }));
+    } else if (dragState.current?.type === "pinch" && pointers.current.size === 2) {
+      const pts = Array.from(pointers.current.values());
+      const dist = Math.hypot(pts[0].x - pts[1].x, pts[0].y - pts[1].y);
+      const scale = clamp(dragState.current.startScale * (dist / dragState.current.startDist), 0.3, 3);
+      setView((v) => ({ ...v, scale }));
+    }
+  }
+  function bgPointerUp(e) {
+    if (starDrag.current && starDrag.current.pointerId === e.pointerId) {
+      starDrag.current = null;
+      return;
+    }
+    pointers.current.delete(e.pointerId);
+    if (pointers.current.size === 0) dragState.current = null;
+  }
+  function handleWheel(e) {
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.08 : 0.92;
+    setView((v) => ({ ...v, scale: clamp(v.scale * factor, 0.3, 3) }));
+  }
+  function zoomBy(f) {
+    setView((v) => ({ ...v, scale: clamp(v.scale * f, 0.3, 3) }));
+  }
+  function recenter() {
+    const rect = svgRef.current.getBoundingClientRect();
+    setView({ scale: 1, tx: rect.width / 2, ty: rect.height / 2 });
+  }
+
+  function starClicked(star) {
+    if (mode === "open") onOpenStar(star.id);
+    else if (mode === "link") {
+      if (linkFirst === null) setLinkFirst(star.id);
+      else if (linkFirst === star.id) setLinkFirst(null);
+      else {
+        onLink(linkFirst, star.id);
+        setLinkFirst(null);
+      }
+    } else if (mode === "group") {
+      setGroupSelection((sel) => (sel.includes(star.id) ? sel.filter((id) => id !== star.id) : [...sel, star.id]));
+    }
+  }
+  function starPointerDown(e, star) {
+    if (mode !== "move") return;
+    e.stopPropagation();
+    starDrag.current = { id: star.id, pointerId: e.pointerId };
+  }
+
+  const hint = {
+    open: "Tap a star to open it. Drag the background to look around.",
+    move: "Drag a star to move it.",
+    link: linkFirst ? "Tap another star to connect it." : "Tap a star, then tap a second star to connect them.",
+    group: "Tap stars to select them, then constellate.",
+  }[mode];
+
+  return (
+    <div className="sky-screen">
+      <div className="sky-topbar">
+        <button className="text-link" onClick={onHome}>← Home</button>
+        <div className="sky-modes">
+          {[
+            ["open", "Open"],
+            ["move", "Move"],
+            ["link", "Link"],
+            ["group", "Group"],
+          ].map(([key, label]) => (
+            <button key={key} className={`sky-mode-btn${mode === key ? " active" : ""}`} onClick={() => setMode(key)}>
+              {label}
+            </button>
+          ))}
+        </div>
+        <button className="text-link" onClick={onNewStar}>+ New star</button>
+      </div>
+      <div className="sky-hint">{hint}</div>
+
+      <svg
+        ref={svgRef}
+        className="sky-canvas"
+        onPointerDown={bgPointerDown}
+        onPointerMove={bgPointerMove}
+        onPointerUp={bgPointerUp}
+        onPointerCancel={bgPointerUp}
+        onWheel={handleWheel}
+      >
+        <defs>
+          <filter id="glow" x="-100%" y="-100%" width="300%" height="300%">
+            <feGaussianBlur stdDeviation="6" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="var(--line)" />
+          </marker>
+        </defs>
+
+        <g transform={`translate(${view.tx},${view.ty}) scale(${view.scale})`}>
+          {data.constellations.map((c) => {
+            const pts = c.members.map((id) => data.stars.find((s) => s.id === id)).filter(Boolean).map((s) => ({ x: s.x, y: s.y }));
+            const b = constellationBoundary(pts);
+            if (!b) return null;
+            return (
+              <g key={c.id} style={{ pointerEvents: mode === "open" ? "all" : "none" }} onClick={() => onOpenConstellation(c.id)}>
+                {b.path ? (
+                  <path d={b.path} fill="var(--gold-soft)" stroke="rgba(201,168,104,0.5)" strokeWidth={1.2} />
+                ) : (
+                  <circle cx={b.circle.cx} cy={b.circle.cy} r={b.circle.r} fill="var(--gold-soft)" stroke="rgba(201,168,104,0.5)" strokeWidth={1.2} />
+                )}
+                <text x={b.cx} y={b.path ? b.cy : b.circle.cy - b.circle.r - 12} textAnchor="middle" fontFamily="var(--font-display)" fontSize={15} fill="var(--gold)" style={{ pointerEvents: "none" }}>
+                  {c.name}
+                </text>
+              </g>
+            );
+          })}
+
+          {data.connections.map((c) => {
+            const a = data.stars.find((s) => s.id === c.source);
+            const b = data.stars.find((s) => s.id === c.target);
+            if (!a || !b) return null;
+            return (
+              <line
+                key={c.id}
+                x1={a.x} y1={a.y} x2={b.x} y2={b.y}
+                stroke="var(--line)" strokeWidth={1.3} markerEnd="url(#arrow)"
+                style={{ cursor: mode === "link" ? "pointer" : "default", pointerEvents: mode === "link" ? "stroke" : "none" }}
+                onClick={(e) => { if (mode === "link") { e.stopPropagation(); onRemoveConnection(c.id); } }}
+              />
+            );
+          })}
+
+          {data.stars.map((s) => {
+            const selected = (mode === "link" && linkFirst === s.id) || (mode === "group" && groupSelection.includes(s.id));
+            return (
+              <g
+                key={s.id}
+                transform={`translate(${s.x},${s.y})`}
+                onPointerDown={(e) => starPointerDown(e, s)}
+                onClick={(e) => { e.stopPropagation(); starClicked(s); }}
+                style={{ cursor: mode === "move" ? "grab" : "pointer" }}
+              >
+                {selected && <circle r={17} fill="none" stroke="var(--gold)" strokeWidth={1.5} />}
+                <circle r={7} fill="var(--star)" filter="url(#glow)" opacity={0.95} />
+                <text y={26} textAnchor="middle" fontSize={12} fill="var(--star-dim)" fontFamily="var(--font-body)">
+                  {s.name.length > 20 ? s.name.slice(0, 19) + "…" : s.name}
+                </text>
+              </g>
+            );
+          })}
+        </g>
+      </svg>
+
+      {data.stars.length === 0 && (
+        <div className="sky-empty">
+          <div className="pulse-star">✦</div>
+          <h2 className="display" style={{ fontSize: 20 }}>Your sky is empty</h2>
+          <p className="muted">Wander a while to find your first star.</p>
+        </div>
+      )}
+
+      <div className="sky-zoom">
+        <button className="zoom-btn" onClick={() => zoomBy(1.2)}>+</button>
+        <button className="zoom-btn" onClick={() => zoomBy(0.83)}>–</button>
+        <button className="zoom-btn" style={{ fontSize: 13 }} onClick={recenter}>⟲</button>
+      </div>
+
+      {mode === "group" && groupSelection.length >= 2 && (
+        <div className="constellate-fab">
+          <button className="bracket-btn primary" onClick={onConstellate}>
+            🌌 Constellate ({groupSelection.length})
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ============================== Modals ============================== */
+
+function ModalBase({ children, onClose }) {
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="modal-sheet" onClick={(e) => e.stopPropagation()}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function StarModal({ star, onClose, onRename, onEdit, onDelete, onLinkFromHere }) {
+  const [editingName, setEditingName] = useState(false);
+  const [editingContent, setEditingContent] = useState(false);
+  const [name, setName] = useState(star ? star.name : "");
+  const [content, setContent] = useState(star ? star.content : "");
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  if (!star) return null;
+
+  return (
+    <ModalBase onClose={onClose}>
+      {editingName ? (
+        <input className="field" value={name} autoFocus onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && (onRename(name), setEditingName(false))} />
+      ) : (
+        <h2 className="display" style={{ fontSize: 22 }} onClick={() => setEditingName(true)}>✦ {star.name}</h2>
+      )}
+
+      {editingContent ? (
+        <textarea className="field" rows={4} autoFocus value={content} onChange={(e) => setContent(e.target.value)}
+          onBlur={() => { onEdit(content); setEditingContent(false); }} />
+      ) : (
+        <p className="body" onClick={() => setEditingContent(true)}>{star.content || "—"}</p>
+      )}
+
+      <p className="modal-meta">{star.activity} · {fmtDate(star.date)}</p>
+
+      {editingName && (
+        <button className="text-link" style={{ alignSelf: "flex-start" }} onClick={() => { onRename(name); setEditingName(false); }}>Save name</button>
+      )}
+
+      <div className="modal-row">
+        {!confirmDelete ? (
+          <>
+            <button className="bracket-btn" onClick={onLinkFromHere}>Connect from here</button>
+            <button className="bracket-btn danger" onClick={() => setConfirmDelete(true)}>Delete</button>
+            <button className="bracket-btn primary" onClick={onClose}>Close</button>
+          </>
+        ) : (
+          <>
+            <p className="muted" style={{ width: "100%" }}>Remove this star for good?</p>
+            <button className="bracket-btn" onClick={() => setConfirmDelete(false)}>Cancel</button>
+            <button className="bracket-btn danger" onClick={onDelete}>Yes, delete</button>
+          </>
+        )}
+      </div>
+    </ModalBase>
+  );
+}
+
+function ConstellationModal({ constellation, stars, onClose, onRename, onRemoveStar, onOpenStar, onDelete }) {
+  const [editingName, setEditingName] = useState(false);
+  const [name, setName] = useState(constellation ? constellation.name : "");
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  if (!constellation) return null;
+  const members = constellation.members.map((id) => stars.find((s) => s.id === id)).filter(Boolean);
+
+  return (
+    <ModalBase onClose={onClose}>
+      {editingName ? (
+        <input className="field" value={name} autoFocus onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && (onRename(name), setEditingName(false))}
+          onBlur={() => { onRename(name); setEditingName(false); }} />
+      ) : (
+        <h2 className="display" style={{ fontSize: 22 }} onClick={() => setEditingName(true)}>🌌 {constellation.name}</h2>
+      )}
+      <div>
+        {members.map((s) => (
+          <div className="member-row" key={s.id}>
+            <button className="name-btn" onClick={() => onOpenStar(s.id)}>✦ {s.name}</button>
+            <button className="x-btn" onClick={() => onRemoveStar(s.id)}>remove</button>
+          </div>
+        ))}
+      </div>
+      <div className="modal-row">
+        {!confirmDelete ? (
+          <>
+            <button className="bracket-btn danger" onClick={() => setConfirmDelete(true)}>Delete constellation</button>
+            <button className="bracket-btn primary" onClick={onClose}>Close</button>
+          </>
+        ) : (
+          <>
+            <p className="muted" style={{ width: "100%" }}>This won't delete the stars, only the grouping.</p>
+            <button className="bracket-btn" onClick={() => setConfirmDelete(false)}>Cancel</button>
+            <button className="bracket-btn danger" onClick={onDelete}>Yes, delete</button>
+          </>
+        )}
+      </div>
+    </ModalBase>
+  );
+}
+
+function AddActivityModal({ onClose, onAdd }) {
+  const [name, setName] = useState("");
+  const [instruction, setInstruction] = useState("");
+  return (
+    <ModalBase onClose={onClose}>
+      <h2 className="display" style={{ fontSize: 22 }}>Add your own way to wander</h2>
+      <input className="field" placeholder="e.g. Watch clouds" value={name} onChange={(e) => setName(e.target.value)} autoFocus />
+      <textarea className="field" rows={2} placeholder="A short line describing it (optional)" value={instruction} onChange={(e) => setInstruction(e.target.value)} />
+      <div className="modal-row">
+        <button className="bracket-btn" onClick={onClose}>Cancel</button>
+        <button className="bracket-btn primary" disabled={!name.trim()} onClick={() => onAdd(name, instruction)}>Add & begin</button>
+      </div>
+    </ModalBase>
+  );
+}
+
+function NamePromptModal({ title, placeholder, confirmLabel, onClose, onConfirm }) {
+  const [name, setName] = useState("");
+  return (
+    <ModalBase onClose={onClose}>
+      <h2 className="display" style={{ fontSize: 21 }}>{title}</h2>
+      <input className="field" placeholder={placeholder} value={name} autoFocus onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && name.trim() && onConfirm(name)} />
+      <div className="modal-row">
+        <button className="bracket-btn" onClick={onClose}>Cancel</button>
+        <button className="bracket-btn primary" disabled={!name.trim()} onClick={() => onConfirm(name)}>{confirmLabel}</button>
+      </div>
+    </ModalBase>
+  );
+}
+
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<ConstellateApp />);
+</script>
+</body>
+</html>
