@@ -2,14 +2,24 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover, user-scalable=no" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="theme-color" content="#0a0b12" />
 <title>Constellate</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
 <style>
-  html, body { margin:0; padding:0; background:#0a0b12; height:100%; overflow:hidden; }
-  #root { height:100dvh; width:100%; }
+  html, body {
+    margin:0; padding:0; background:#0a0b12;
+    height: 100%; height: 100dvh;
+    overflow: hidden;
+    overscroll-behavior: none;
+    -webkit-text-size-adjust: 100%;
+  }
+  #root { height: 100%; width: 100%; }
 </style>
 </head>
 <body>
@@ -543,6 +553,7 @@ function Style() {
         background: radial-gradient(ellipse 120% 70% at 50% -10%, #1c2040 0%, #12142380 42%, var(--void) 78%);
         color: var(--text);
         font-family: var(--font-body);
+        min-height: 100vh;
         min-height: 100dvh;
         width: 100%;
         display: flex;
@@ -550,6 +561,16 @@ function Style() {
         position: relative;
         overflow: hidden;
         box-sizing: border-box;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
+        overscroll-behavior: none;
+      }
+      .constellate-root input,
+      .constellate-root textarea {
+        -webkit-user-select: text;
+        user-select: text;
+        -webkit-touch-callout: default;
       }
 
       .bg-layer { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
@@ -600,13 +621,15 @@ function Style() {
       .column {
         max-width: 420px;
         margin: 0 auto;
+        min-height: 100vh;
         min-height: 100dvh;
         width: 100%;
         display: flex;
         flex-direction: column;
         justify-content: center;
-        padding: 32px 24px 40px;
+        padding: calc(32px + env(safe-area-inset-top)) 24px calc(40px + env(safe-area-inset-bottom));
         gap: 24px;
+        overflow-y: auto;
         animation: fade-in .5s ease both;
       }
       @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
@@ -671,33 +694,34 @@ function Style() {
       }
       .compass-node {
         position: absolute; transform: translate(-50%,-50%);
-        width: 84px; height: 84px; border-radius: 50%;
+        width: clamp(58px, 21vw, 84px); height: clamp(58px, 21vw, 84px); border-radius: 50%;
         border: 1px solid rgba(244,239,228,0.22);
         display: flex; align-items: center; justify-content: center; text-align: center;
-        font-size: 13.5px; color: var(--star-dim); padding: 6px;
+        font-size: clamp(11px, 3.4vw, 13.5px); color: var(--star-dim); padding: 6px;
         transition: border-color .2s, color .2s, background .2s;
         background: rgba(23,26,43,0.4);
       }
-      .compass-node:hover { border-color: var(--gold); color: var(--star); background: var(--gold-soft); }
+      .compass-node:hover, .compass-node:active { border-color: var(--gold); color: var(--star); background: var(--gold-soft); }
       .compass-extra-row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; max-width: 380px; }
       .compass-chip {
-        border: 1px solid rgba(244,239,228,0.18); border-radius: 999px; padding: 8px 14px;
-        font-size: 13px; color: var(--star-dim);
+        border: 1px solid rgba(244,239,228,0.18); border-radius: 999px; padding: 10px 14px;
+        font-size: 13px; color: var(--star-dim); min-height: 40px;
       }
       .compass-chip:hover { border-color: var(--gold); color: var(--star); }
-      .compass-links { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+      .compass-links { display: flex; flex-direction: column; align-items: center; gap: 2px; }
 
       /* ---- wander screen ---- */
       .wander-screen {
-        min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center;
-        gap: 36px; padding: 32px; text-align: center;
+        min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center;
+        gap: 36px; padding: calc(32px + env(safe-area-inset-top)) 32px calc(32px + env(safe-area-inset-bottom)); text-align: center;
       }
       .wander-clock { font-family: var(--font-display); font-size: 42px; color: var(--star-dim); letter-spacing: 0.02em; }
       .wander-word { font-family: var(--font-display); font-size: 26px; color: var(--star); }
 
       .duration-row { display: flex; flex-wrap: wrap; gap: 10px; }
       .duration-btn {
-        border: 1px solid rgba(244,239,228,0.22); border-radius: 999px; padding: 9px 16px; font-size: 14px; color: var(--star-dim);
+        border: 1px solid rgba(244,239,228,0.22); border-radius: 999px; padding: 10px 16px; font-size: 14px; color: var(--star-dim);
+        min-height: 40px;
       }
       .duration-btn.active { border-color: var(--gold); color: var(--gold); background: var(--gold-soft); }
 
@@ -707,23 +731,28 @@ function Style() {
 
       /* ---- sky ---- */
       .full { padding: 0; }
-      .sky-screen { position: relative; width: 100%; height: 100dvh; display: flex; flex-direction: column; }
+      .sky-screen { position: relative; width: 100%; height: 100vh; height: 100dvh; display: flex; flex-direction: column; }
       .sky-topbar {
-        display: flex; align-items: center; justify-content: space-between; gap: 8px;
-        padding: 14px 16px; z-index: 20; background: linear-gradient(to bottom, rgba(10,11,18,0.92), rgba(10,11,18,0));
+        display: flex; flex-direction: column; gap: 8px;
+        padding: calc(12px + env(safe-area-inset-top)) 14px 10px; z-index: 20;
+        background: linear-gradient(to bottom, rgba(10,11,18,0.94), rgba(10,11,18,0));
         position: absolute; top: 0; left: 0; right: 0;
       }
-      .sky-modes { display: flex; gap: 4px; background: rgba(23,26,43,0.7); border: 1px solid rgba(244,239,228,0.14); border-radius: 999px; padding: 3px; }
-      .sky-mode-btn { font-size: 12.5px; padding: 7px 11px; border-radius: 999px; color: var(--text-muted); }
+      .sky-topbar-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap; }
+      .sky-modes { display: flex; gap: 3px; background: rgba(23,26,43,0.7); border: 1px solid rgba(244,239,228,0.14); border-radius: 999px; padding: 3px; }
+      .sky-mode-btn { font-size: 12px; padding: 9px 10px; border-radius: 999px; color: var(--text-muted); min-height: 38px; }
       .sky-mode-btn.active { background: var(--gold-soft); color: var(--gold); }
       .sky-hint {
-        position: absolute; top: 62px; left: 0; right: 0; text-align: center; z-index: 15;
-        font-size: 12.5px; color: var(--text-muted); pointer-events: none; padding: 0 20px;
+        text-align: center; z-index: 15;
+        font-size: 12.5px; color: var(--text-muted); pointer-events: none; padding: 0 12px;
       }
       .sky-canvas { flex: 1; touch-action: none; width: 100%; height: 100%; }
-      .sky-zoom { position: absolute; bottom: 24px; right: 16px; display: flex; flex-direction: column; gap: 8px; z-index: 20; }
+      .sky-zoom {
+        position: absolute; bottom: calc(24px + env(safe-area-inset-bottom)); right: 16px;
+        display: flex; flex-direction: column; gap: 8px; z-index: 20;
+      }
       .zoom-btn {
-        width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(244,239,228,0.2);
+        width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(244,239,228,0.2);
         background: rgba(23,26,43,0.75); color: var(--star-dim); font-size: 18px;
       }
       .sky-empty {
@@ -732,7 +761,7 @@ function Style() {
       }
       .sky-empty .bracket-btn { pointer-events: all; }
       .constellate-fab {
-        position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 25;
+        position: absolute; bottom: calc(24px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); z-index: 25;
       }
 
       /* ---- modals ---- */
@@ -744,8 +773,9 @@ function Style() {
       @media (min-width: 560px) { .modal-backdrop { align-items: center; } }
       .modal-sheet {
         background: var(--panel); border: 1px solid rgba(244,239,228,0.1); border-bottom: none;
-        border-radius: 20px 20px 0 0; width: 100%; max-width: 460px; padding: 26px 24px 32px;
-        display: flex; flex-direction: column; gap: 16px; max-height: 86dvh; overflow-y: auto;
+        border-radius: 20px 20px 0 0; width: 100%; max-width: 460px;
+        padding: 26px 24px calc(28px + env(safe-area-inset-bottom));
+        display: flex; flex-direction: column; gap: 16px; max-height: 86vh; max-height: 86dvh; overflow-y: auto;
         animation: rise .25s ease both;
       }
       @media (min-width: 560px) { .modal-sheet { border-radius: 20px; border-bottom: 1px solid rgba(244,239,228,0.1); } }
@@ -755,7 +785,7 @@ function Style() {
       .member-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px solid rgba(244,239,228,0.08); }
       .member-row button.name-btn { font-size: 14.5px; color: var(--text); text-align: left; }
       .member-row button.name-btn:hover { color: var(--gold); }
-      .x-btn { color: var(--text-muted); font-size: 13px; }
+      .x-btn { color: var(--text-muted); font-size: 13px; padding: 8px 6px; }
       .x-btn:hover { color: var(--danger); }
     `}</style>
   );
@@ -788,6 +818,10 @@ Connect unexpectedly.</h1>
           className="field"
           placeholder="Your name"
           value={name}
+          autoCapitalize="words"
+          autoCorrect="off"
+          spellCheck={false}
+          enterKeyHint="done"
           onChange={(e) => setName(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && onLogin(name)}
         />
@@ -1053,22 +1087,24 @@ function SkyScreen({
   return (
     <div className="sky-screen">
       <div className="sky-topbar">
-        <button className="text-link" onClick={onHome}>← Home</button>
-        <div className="sky-modes">
-          {[
-            ["open", "Open"],
-            ["move", "Move"],
-            ["link", "Link"],
-            ["group", "Group"],
-          ].map(([key, label]) => (
-            <button key={key} className={`sky-mode-btn${mode === key ? " active" : ""}`} onClick={() => setMode(key)}>
-              {label}
-            </button>
-          ))}
+        <div className="sky-topbar-row">
+          <button className="text-link" onClick={onHome}>← Home</button>
+          <div className="sky-modes">
+            {[
+              ["open", "Open"],
+              ["move", "Move"],
+              ["link", "Link"],
+              ["group", "Group"],
+            ].map(([key, label]) => (
+              <button key={key} className={`sky-mode-btn${mode === key ? " active" : ""}`} onClick={() => setMode(key)}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <button className="text-link" onClick={onNewStar}>+ New star</button>
         </div>
-        <button className="text-link" onClick={onNewStar}>+ New star</button>
+        <div className="sky-hint">{hint}</div>
       </div>
-      <div className="sky-hint">{hint}</div>
 
       <svg
         ref={svgRef}
