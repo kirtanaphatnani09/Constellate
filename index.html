@@ -25,7 +25,7 @@
 <body>
 <div id="root"></div>
 <script type="text/babel" data-presets="react">
-const { useState, useEffect, useRef, useCallback } = React;
+const { useState, useEffect, useRef, useCallback, useMemo } = React;
 
 
 /* ---------------------------------------------------------------
@@ -62,6 +62,23 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 
 const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
 const fmtDate = (d) => new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 const fmtClock = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+
+/* Merge two data blobs by id, favoring existing records on conflict.
+   Used when restoring a backup file so an import can only add — never
+   silently delete — what's already in this browser. */
+function mergeById(a = [], b = []) {
+  const map = new Map(a.map((x) => [x.id, x]));
+  for (const item of b) if (item && item.id && !map.has(item.id)) map.set(item.id, item);
+  return Array.from(map.values());
+}
+function mergeData(existing, incoming) {
+  return {
+    stars: mergeById(existing.stars, incoming.stars),
+    connections: mergeById(existing.connections, incoming.connections),
+    constellations: mergeById(existing.constellations, incoming.constellations),
+    customActivities: mergeById(existing.customActivities, incoming.customActivities),
+  };
+}
 
 /* Storage: plain browser localStorage. Works on any static host —
    no server or accounts required. Data lives only in this browser. */
@@ -199,7 +216,7 @@ function ConstellateApp() {
     const raw = await safeGet(userKey(name));
     setData(raw ? JSON.parse(raw) : emptyData());
     setCurrentUser(name);
-    setScreen("home");
+    setScreen("sky");
   }
 
   function logout() {
@@ -216,6 +233,43 @@ function ConstellateApp() {
     },
     [currentUser]
   );
+
+  /* ---- backup: export to a downloadable file, import/merge from one ---- */
+  function exportBackup() {
+    const payload = { app: "constellate", version: 1, user: currentUser, exportedAt: Date.now(), data };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const safeName = currentUser.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "sky";
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `constellate-${safeName}-${dateStr}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showToast("Backup downloaded");
+  }
+
+  function importBackupFile(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result);
+        const incoming = parsed && parsed.data ? parsed.data : parsed;
+        if (!incoming || !Array.isArray(incoming.stars)) throw new Error("bad shape");
+        const before = data.stars.length;
+        const merged = mergeData(data, incoming);
+        persist(merged);
+        const added = merged.stars.length - before;
+        showToast(added > 0 ? `Restored ${added} star${added === 1 ? "" : "s"}` : "Backup restored — nothing new to add");
+      } catch (e) {
+        showToast("That doesn't look like a Constellate backup file");
+      }
+    };
+    reader.readAsText(file);
+  }
 
   /* ---- star / connection / constellation mutations ---- */
   function addStar({ name, content, activityName }) {
@@ -326,12 +380,13 @@ function ConstellateApp() {
       {screen === "login" && <LoginScreen usersList={usersList} onLogin={loginAs} />}
 
       {screen === "home" && currentUser && (
-        <HomeScreen
+        <SettingsScreen
           user={currentUser}
           starCount={data.stars.length}
-          onWander={() => setScreen("compass")}
-          onSky={() => setScreen("sky")}
+          onBackToSky={() => setScreen("sky")}
           onLogout={logout}
+          onExport={exportBackup}
+          onImport={importBackupFile}
         />
       )}
 
@@ -340,7 +395,7 @@ function ConstellateApp() {
           customActivities={data.customActivities}
           onPick={beginActivity}
           onSurprise={surpriseMe}
-          onHome={() => setScreen("home")}
+          onHome={() => setScreen("sky")}
           onAddActivity={() => setShowAddActivity(true)}
         />
       )}
@@ -369,7 +424,7 @@ function ConstellateApp() {
           onMakeStar={() => setScreen("createStar")}
           onNothing={() => {
             showToast("That's alright. Wander again anytime.");
-            setScreen("home");
+            setScreen("sky");
           }}
         />
       )}
@@ -405,8 +460,9 @@ function ConstellateApp() {
           onMoveStar={(id, x, y) => updateStar(id, { x, y })}
           onLink={addConnection}
           onRemoveConnection={removeConnection}
-          onHome={() => setScreen("home")}
-          onNewStar={() => {
+          onSettings={() => setScreen("home")}
+          onWander={() => setScreen("compass")}
+          onAddIdea={() => {
             setSelectedActivity(null);
             setScreen("createStar");
           }}
@@ -725,9 +781,12 @@ function Style() {
       }
       .duration-btn.active { border-color: var(--gold); color: var(--gold); background: var(--gold-soft); }
 
-      /* ---- home ---- */
-      .home-actions { display: flex; flex-direction: column; gap: 12px; }
-      .home-actions .bracket-btn { width: 100%; text-align: center; }
+      /* ---- settings ---- */
+      .backup-section {
+        border-top: 1px solid rgba(244,239,228,0.1); padding-top: 18px;
+        display: flex; flex-direction: column; gap: 10px;
+      }
+      .backup-row { display: flex; flex-wrap: wrap; gap: 16px; }
 
       /* ---- sky ---- */
       .full { padding: 0; }
@@ -747,6 +806,10 @@ function Style() {
         font-size: 12.5px; color: var(--text-muted); pointer-events: none; padding: 0 12px;
       }
       .sky-canvas { flex: 1; touch-action: none; width: 100%; height: 100%; }
+      .sky-actions {
+        position: absolute; bottom: calc(24px + env(safe-area-inset-bottom)); left: 16px;
+        display: flex; flex-direction: column; gap: 10px; z-index: 20; max-width: 60vw;
+      }
       .sky-zoom {
         position: absolute; bottom: calc(24px + env(safe-area-inset-bottom)); right: 16px;
         display: flex; flex-direction: column; gap: 8px; z-index: 20;
@@ -833,21 +896,45 @@ Connect unexpectedly.</h1>
   );
 }
 
-function HomeScreen({ user, starCount, onWander, onSky, onLogout }) {
+function SettingsScreen({ user, starCount, onBackToSky, onLogout, onExport, onImport }) {
+  const fileInputRef = useRef(null);
   return (
-    <div className="column">
-      <div className="kicker">{starCount > 0 ? "Welcome back" : "Welcome"}</div>
+    <div className="column" style={{ justifyContent: "flex-start" }}>
+      <button className="text-link" style={{ alignSelf: "flex-start" }} onClick={onBackToSky}>← Sky</button>
+      <div className="kicker">Signed in as</div>
       <h1 className="display">{user}</h1>
       <p className="muted">
         {starCount > 0
           ? `Your sky holds ${starCount} star${starCount === 1 ? "" : "s"}.`
-          : "Your sky is still empty. Wander a while and see what emerges."}
+          : "Your sky is still empty."}
       </p>
-      <div className="home-actions">
-        <button className="bracket-btn primary" onClick={onWander}>[ Wander ]</button>
-        <button className="bracket-btn" onClick={onSky}>[ My sky ]</button>
+
+      <div className="backup-section" style={{ borderTop: "none", paddingTop: 4 }}>
+        <p className="muted">
+          Your sky lives in this browser only. Download a backup, then restore it on another device to bring
+          your stars with you — that's also how you keep two devices in sync, and how you get your sky back if
+          this browser ever forgets it.
+        </p>
+        <div className="backup-row">
+          <button className="text-link" onClick={onExport}>⬇ Download backup</button>
+          <button className="text-link" onClick={() => fileInputRef.current && fileInputRef.current.click()}>
+            ⬆ Restore from backup
+          </button>
+        </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="application/json"
+          style={{ display: "none" }}
+          onChange={(e) => {
+            const file = e.target.files && e.target.files[0];
+            onImport(file);
+            e.target.value = "";
+          }}
+        />
       </div>
-      <button className="text-link" style={{ alignSelf: "flex-start" }} onClick={onLogout}>
+
+      <button className="text-link" style={{ alignSelf: "flex-start", marginTop: "auto" }} onClick={onLogout}>
         Not {user}? Switch profile
       </button>
     </div>
@@ -858,7 +945,7 @@ function CompassScreen({ customActivities, onPick, onSurprise, onHome, onAddActi
   const n = DEFAULT_ACTIVITIES.length;
   return (
     <div className="column">
-      <button className="text-link" style={{ alignSelf: "flex-start" }} onClick={onHome}>← Home</button>
+      <button className="text-link" style={{ alignSelf: "flex-start" }} onClick={onHome}>← Sky</button>
       <h2 className="display" style={{ textAlign: "center" }}>Where do you want to wander?</h2>
       <div className="compass-wrap">
         <div className="compass-wheel">
@@ -988,7 +1075,7 @@ function CreateStarScreen({ activityName, onCancel, onSave }) {
 function SkyScreen({
   data, mode, setMode, linkFirst, setLinkFirst, groupSelection, setGroupSelection,
   onOpenStar, onOpenConstellation, onMoveStar, onLink, onRemoveConnection,
-  onHome, onNewStar, onConstellate,
+  onSettings, onWander, onAddIdea, onConstellate,
 }) {
   const svgRef = useRef(null);
   const [view, setView] = useState({ scale: 1, tx: 0, ty: 0 });
@@ -1088,7 +1175,7 @@ function SkyScreen({
     <div className="sky-screen">
       <div className="sky-topbar">
         <div className="sky-topbar-row">
-          <button className="text-link" onClick={onHome}>← Home</button>
+          <button className="text-link" onClick={onSettings}>Data actions</button>
           <div className="sky-modes">
             {[
               ["open", "Open"],
@@ -1101,7 +1188,7 @@ function SkyScreen({
               </button>
             ))}
           </div>
-          <button className="text-link" onClick={onNewStar}>+ New star</button>
+          <div style={{ width: 68 }} />
         </div>
         <div className="sky-hint">{hint}</div>
       </div>
@@ -1187,7 +1274,14 @@ function SkyScreen({
         <div className="sky-empty">
           <div className="pulse-star">✦</div>
           <h2 className="display" style={{ fontSize: 20 }}>Your sky is empty</h2>
-          <p className="muted">Wander a while to find your first star.</p>
+          <p className="muted">Wander a while, or add an idea straight away.</p>
+        </div>
+      )}
+
+      {mode === "open" && (
+        <div className="sky-actions">
+          <button className="bracket-btn primary" onClick={onWander}>Wander</button>
+          <button className="bracket-btn" onClick={onAddIdea}>✦ Add idea</button>
         </div>
       )}
 
