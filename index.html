@@ -39,15 +39,16 @@ const USERS_KEY = "constellate:users";
 const userKey = (name) => `constellate:user:${name.toLowerCase()}`;
 
 const DEFAULT_ACTIVITIES = [
-  { id: "look-up", name: "Look up", instruction: "Find the sky, even a sliver of it between buildings or branches. Notice what's happening up there right now." },
-  { id: "observe", name: "Observe", instruction: "Pick something ordinary nearby. Look at it longer than you normally would." },
-  { id: "walk", name: "Walk", instruction: "Walk somewhere familiar. Notice something you've never noticed before." },
-  { id: "listen", name: "Listen", instruction: "Close your eyes if you can. Notice every sound layered around you, near and far." },
-  { id: "daydream", name: "Daydream", instruction: "Let your mind go where it wants. Don't steer it anywhere." },
-  { id: "remember", name: "Remember", instruction: "Let a memory surface on its own. Follow it without deciding where it leads." },
-  { id: "imagine", name: "Imagine", instruction: "Picture something that doesn't exist yet. Stay with it a while." },
+  { id: "invent-stranger", name: "Invent a stranger", instruction: "Choose someone nearby you'll never actually meet — on the platform, in the queue, across the aisle. Decide where they're rushing to, who's waiting for them, what kept them up last night. You'll never find out if you're right, and that's exactly the appeal." },
+  { id: "stray-line", name: "Catch a stray line", instruction: "Let the noise around you wash past until one fragment snags — a word, a laugh, half a sentence through a doorway. Hold onto it. It's the first line of something you haven't written yet." },
+  { id: "look-up", name: "Look up", instruction: "The sky rarely announces itself. Find whatever's overhead — clouds, wires, a bird cutting past — and give it the attention you'd give a letter from someone you love." },
+  { id: "what-if", name: "What if", instruction: "Pick the most unremarkable thing in view — a vending machine, a stalled escalator, a pigeon that owns the platform — and ask what would happen if it turned out to be extraordinary." },
+  { id: "time-travel", name: "Time-travel this spot", instruction: "Picture exactly where you're standing a hundred years ago, then a hundred years from now. Someone else was waiting here too, once. Someone else will be." },
+  { id: "walk", name: "Walk", instruction: "Take a route your feet already know by heart, then ask it to surprise you. Familiar places keep rewriting themselves for anyone willing to look twice." },
+  { id: "daydream", name: "Daydream", instruction: "You've got a few unclaimed minutes — hand them to your mind and see where it takes you. No destination required." },
+  { id: "remember", name: "Remember", instruction: "Let a memory rise on its own terms, uninvited. Don't interrogate it — just watch where it wants to take you." },
 ];
-const DO_NOTHING = { id: "do-nothing", name: "Do nothing", instruction: "Put the phone down. Do absolutely nothing for a while." };
+const DO_NOTHING = { id: "do-nothing", name: "Do nothing", instruction: "Set the phone face-down and do nothing at all. Boredom is where the mind finally starts talking to itself." };
 const DIRECT = { id: "direct", name: "Direct capture", instruction: "" };
 
 const DURATIONS = [
@@ -325,7 +326,7 @@ function ConstellateApp() {
     setOpenConstellationId(null);
   }
   function addCustomActivity(name, instruction) {
-    const a = { id: uid(), name: name.trim(), instruction: instruction.trim() || "Follow it wherever it goes." };
+    const a = { id: uid(), name: name.trim(), instruction: instruction.trim() || "Let it lead wherever it wants to go." };
     persist({ ...data, customActivities: [...data.customActivities, a] });
     return a;
   }
@@ -662,7 +663,7 @@ function Style() {
       .constellate-root button, .constellate-root input, .constellate-root textarea {
         font-family: inherit; color: inherit;
       }
-      .constellate-root button {
+      :where(.constellate-root button) {
         background: none; border: none; cursor: pointer; -webkit-tap-highlight-color: transparent;
       }
       .constellate-root button:focus-visible,
@@ -703,8 +704,8 @@ function Style() {
         min-height: 46px;
       }
       .bracket-btn:hover { border-color: var(--gold); }
-      .bracket-btn.primary { background: var(--gold-soft); border-color: var(--gold); color: var(--gold); }
-      .bracket-btn.primary:hover { background: rgba(201,168,104,0.26); }
+      .bracket-btn.primary { background: var(--gold); border-color: var(--gold); color: #14151f; font-weight: 600; }
+      .bracket-btn.primary:hover { background: #d8ba7c; }
       .bracket-btn.danger { border-color: rgba(201,123,107,0.5); color: var(--danger); }
       .bracket-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
@@ -750,10 +751,10 @@ function Style() {
       }
       .compass-node {
         position: absolute; transform: translate(-50%,-50%);
-        width: clamp(58px, 21vw, 84px); height: clamp(58px, 21vw, 84px); border-radius: 50%;
+        width: clamp(60px, 19vw, 88px); height: clamp(60px, 19vw, 88px); border-radius: 50%;
         border: 1px solid rgba(244,239,228,0.22);
         display: flex; align-items: center; justify-content: center; text-align: center;
-        font-size: clamp(11px, 3.4vw, 13.5px); color: var(--star-dim); padding: 6px;
+        font-size: clamp(11px, 3.4vw, 13.5px); color: var(--star-dim); padding: 6px; line-height: 1.15;
         transition: border-color .2s, color .2s, background .2s;
         background: rgba(23,26,43,0.4);
       }
@@ -807,9 +808,22 @@ function Style() {
       }
       .sky-canvas { flex: 1; touch-action: none; width: 100%; height: 100%; }
       .sky-actions {
-        position: absolute; bottom: calc(24px + env(safe-area-inset-bottom)); left: 16px;
-        display: flex; flex-direction: column; gap: 10px; z-index: 20; max-width: 60vw;
+        position: absolute; bottom: calc(96px + env(safe-area-inset-bottom)); left: 50%;
+        transform: translateX(-50%);
+        display: flex; flex-direction: column; align-items: center; gap: 12px; z-index: 20;
       }
+      .wander-cta {
+        padding: 18px 46px; font-size: 17px; font-weight: 700; letter-spacing: 0.01em;
+        border-radius: 999px; background: var(--gold); color: #14151f; border: 1px solid var(--gold);
+        min-height: 56px; white-space: nowrap;
+        animation: wander-glow 3.2s ease-in-out infinite;
+      }
+      .wander-cta:hover { background: #d8ba7c; }
+      @keyframes wander-glow {
+        0%, 100% { box-shadow: 0 0 16px 2px rgba(201,168,104,0.32); }
+        50% { box-shadow: 0 0 30px 7px rgba(201,168,104,0.58); }
+      }
+      .add-idea-link { font-size: 13px; }
       .sky-zoom {
         position: absolute; bottom: calc(24px + env(safe-area-inset-bottom)); right: 16px;
         display: flex; flex-direction: column; gap: 8px; z-index: 20;
@@ -845,6 +859,15 @@ function Style() {
       @keyframes rise { from { transform: translateY(24px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
       .modal-row { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
       .modal-meta { font-size: 12.5px; color: var(--text-muted); }
+      .editable-field {
+        display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+        width: 100%; text-align: left; padding: 12px 4px;
+        border-bottom: 1px dashed rgba(244,239,228,0.22);
+      }
+      .editable-field:hover, .editable-field:active { border-bottom-color: var(--gold); }
+      .editable-field .edit-icon { font-size: 13px; color: var(--text-muted); flex-shrink: 0; margin-top: 4px; }
+      .editable-field:hover .edit-icon { color: var(--gold); }
+      .edit-field-group { display: flex; flex-direction: column; gap: 8px; }
       .member-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px solid rgba(244,239,228,0.08); }
       .member-row button.name-btn { font-size: 14.5px; color: var(--text); text-align: left; }
       .member-row button.name-btn:hover { color: var(--gold); }
@@ -947,6 +970,7 @@ function CompassScreen({ customActivities, onPick, onSurprise, onHome, onAddActi
     <div className="column">
       <button className="text-link" style={{ alignSelf: "flex-start" }} onClick={onHome}>← Sky</button>
       <h2 className="display" style={{ textAlign: "center" }}>Where do you want to wander?</h2>
+      <p className="muted" style={{ textAlign: "center" }}>Good for a commute, a queue, a waiting room — any pocket of time that's yours.</p>
       <div className="compass-wrap">
         <div className="compass-wheel">
           <div className="compass-center">✦</div>
@@ -955,11 +979,12 @@ function CompassScreen({ customActivities, onPick, onSurprise, onHome, onAddActi
             const r = 38;
             const left = 50 + r * Math.cos(angle);
             const top = 50 + r * Math.sin(angle);
+            const fontSize = a.name.length > 15 ? "clamp(9.5px, 2.7vw, 11px)" : a.name.length > 9 ? "clamp(10.5px, 3vw, 12.5px)" : "clamp(11px, 3.4vw, 13.5px)";
             return (
               <button
                 key={a.id}
                 className="compass-node"
-                style={{ left: `${left}%`, top: `${top}%` }}
+                style={{ left: `${left}%`, top: `${top}%`, fontSize }}
                 onClick={() => onPick(a)}
               >
                 {a.name}
@@ -1280,8 +1305,8 @@ function SkyScreen({
 
       {mode === "open" && (
         <div className="sky-actions">
-          <button className="bracket-btn primary" onClick={onWander}>Wander</button>
-          <button className="bracket-btn" onClick={onAddIdea}>✦ Add idea</button>
+          <button className="wander-cta" onClick={onWander}>Wander</button>
+          <button className="text-link add-idea-link" onClick={onAddIdea}>or add an idea</button>
         </div>
       )}
 
@@ -1322,27 +1347,62 @@ function StarModal({ star, onClose, onRename, onEdit, onDelete, onLinkFromHere }
   const [confirmDelete, setConfirmDelete] = useState(false);
   if (!star) return null;
 
+  function saveName() {
+    onRename(name.trim() || star.name);
+    setEditingName(false);
+  }
+  function cancelName() {
+    setName(star.name);
+    setEditingName(false);
+  }
+  function saveContent() {
+    onEdit(content);
+    setEditingContent(false);
+  }
+  function cancelContent() {
+    setContent(star.content);
+    setEditingContent(false);
+  }
+
   return (
     <ModalBase onClose={onClose}>
       {editingName ? (
-        <input className="field" value={name} autoFocus onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && (onRename(name), setEditingName(false))} />
+        <div className="edit-field-group">
+          <input
+            className="field" value={name} autoFocus onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") saveName(); if (e.key === "Escape") cancelName(); }}
+          />
+          <div className="modal-row" style={{ justifyContent: "flex-start" }}>
+            <button className="text-link" onClick={saveName}>Save</button>
+            <button className="text-link" onClick={cancelName}>Cancel</button>
+          </div>
+        </div>
       ) : (
-        <h2 className="display" style={{ fontSize: 22 }} onClick={() => setEditingName(true)}>✦ {star.name}</h2>
+        <button className="editable-field" onClick={() => setEditingName(true)}>
+          <h2 className="display" style={{ fontSize: 22, margin: 0 }}>✦ {star.name}</h2>
+          <span className="edit-icon">✎</span>
+        </button>
       )}
 
       {editingContent ? (
-        <textarea className="field" rows={4} autoFocus value={content} onChange={(e) => setContent(e.target.value)}
-          onBlur={() => { onEdit(content); setEditingContent(false); }} />
+        <div className="edit-field-group">
+          <textarea
+            className="field" rows={4} autoFocus value={content} onChange={(e) => setContent(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Escape") cancelContent(); }}
+          />
+          <div className="modal-row" style={{ justifyContent: "flex-start" }}>
+            <button className="text-link" onClick={saveContent}>Save</button>
+            <button className="text-link" onClick={cancelContent}>Cancel</button>
+          </div>
+        </div>
       ) : (
-        <p className="body" onClick={() => setEditingContent(true)}>{star.content || "—"}</p>
+        <button className="editable-field" onClick={() => setEditingContent(true)}>
+          <p className="body" style={{ margin: 0 }}>{star.content || "Add a thought…"}</p>
+          <span className="edit-icon">✎</span>
+        </button>
       )}
 
       <p className="modal-meta">{star.activity} · {fmtDate(star.date)}</p>
-
-      {editingName && (
-        <button className="text-link" style={{ alignSelf: "flex-start" }} onClick={() => { onRename(name); setEditingName(false); }}>Save name</button>
-      )}
 
       <div className="modal-row">
         {!confirmDelete ? (
@@ -1377,7 +1437,10 @@ function ConstellationModal({ constellation, stars, onClose, onRename, onRemoveS
           onKeyDown={(e) => e.key === "Enter" && (onRename(name), setEditingName(false))}
           onBlur={() => { onRename(name); setEditingName(false); }} />
       ) : (
-        <h2 className="display" style={{ fontSize: 22 }} onClick={() => setEditingName(true)}>🌌 {constellation.name}</h2>
+        <button className="editable-field" onClick={() => setEditingName(true)}>
+          <h2 className="display" style={{ fontSize: 22, margin: 0 }}>🌌 {constellation.name}</h2>
+          <span className="edit-icon">✎</span>
+        </button>
       )}
       <div>
         {members.map((s) => (
