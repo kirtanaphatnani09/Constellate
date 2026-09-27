@@ -2,59 +2,37 @@
 
 ### Wander freely. Connect unexpectedly.
 
-Constellate is a personal thinking space designed to help people **wander, capture, and connect their thoughts**.
+A quiet space to let your mind wander, catch what surfaces, and see how your thoughts connect.
 
-We live in an environment optimized for constant stimulation: feeds, notifications, recommendations, answers, and productivity.
+The app doesn't give you ideas. It gives you somewhere to find your own.
 
-Constellate explores the opposite question:
-
-> **What happens when we create space for the mind to wander instead?**
-
-The app does not give you ideas.
-
-It gives you somewhere to find your own.
+**[Try it →](https://kirtanaphatnani09.github.io/Constellate/)**
 
 ---
 
-## 🌑 The Idea
+## How it works
 
-Some of our most interesting thoughts appear when we aren't deliberately trying to solve anything.
+**🌙 Wander**
+Tap the moon. Get four ways to wander today: listen for birdsong, watch the sunset, walk nowhere, rewind an old song. Not feeling them? Shuffle for four more. Each one tells you *why it works*, with the research behind it.
 
-While walking.
+**✦ Capture**
+Something caught your mind? Make it a star. Type it, say it in a voice note (up to 2 min), or add photos. Sometimes the photo *is* the idea.
 
-Looking out a window.
+**🌌 Connect**
+Your stars live in your sky. Move them, link them, and group them into constellations when a pattern appears.
 
-Cycling.
-
-Listening to music.
-
-Watching clouds.
-
-Doing nothing.
-
-The mind wanders, memories surface, ideas collide, and unexpected connections appear.
-
-Most of these thoughts disappear.
-
-**Constellate gives them somewhere to land.**
-
-A thought becomes a **Star**.
-
-Stars can be moved, named, connected, grouped, and rearranged.
-
-When relationships emerge between them, they become **Constellations**.
-
-> **A star is a thought.
-> A constellation is a relationship between thoughts.**
+**📅 Look back**
+The wander log marks every day you found something, with a gold star on days your ideas connected.
 
 ---
 
-# 🌌 Product Philosophy
+## Good to know
 
-Constellate is built around a few principles.
+- No accounts, no feeds, no notifications
+- Your sky stays in your browser; nothing is uploaded
+- Use **data actions → download backup** to keep your sky safe or move it to another device
 
-### 1. Don't give people stimuli. Give them space.
-
+> A star is a thought. A constellation is a relationship between thoughts.
 Constellate is not a content feed.
 
 It doesn't exist to constantly give users something to consume.
