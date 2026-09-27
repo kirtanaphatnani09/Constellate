@@ -6,19 +6,13 @@
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<meta name="theme-color" content="#0a0b12" />
-<title>Constellate</title>
+<meta name="theme-color" content="#080b16" />
+<title>constellate</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
 <style>
-  html, body {
-    margin:0; padding:0; background:#0a0b12;
-    height: 100%; height: 100dvh;
-    overflow: hidden;
-    overscroll-behavior: none;
-    -webkit-text-size-adjust: 100%;
-  }
+  html, body { margin:0; padding:0; background:#080b16; height: 100%; height: 100dvh; overflow: hidden; overscroll-behavior: none; -webkit-text-size-adjust: 100%; }
   #root { height: 100%; width: 100%; }
 </style>
 </head>
@@ -39,16 +33,152 @@ const USERS_KEY = "constellate:users";
 const userKey = (name) => `constellate:user:${name.toLowerCase()}`;
 
 const DEFAULT_ACTIVITIES = [
-  { id: "invent-stranger", name: "Invent a stranger", instruction: "Choose someone nearby you'll never actually meet — on the platform, in the queue, across the aisle. Decide where they're rushing to, who's waiting for them, what kept them up last night. You'll never find out if you're right, and that's exactly the appeal." },
-  { id: "stray-line", name: "Catch a stray line", instruction: "Let the noise around you wash past until one fragment snags — a word, a laugh, half a sentence through a doorway. Hold onto it. It's the first line of something you haven't written yet." },
-  { id: "look-up", name: "Look up", instruction: "The sky rarely announces itself. Find whatever's overhead — clouds, wires, a bird cutting past — and give it the attention you'd give a letter from someone you love." },
-  { id: "what-if", name: "What if", instruction: "Pick the most unremarkable thing in view — a vending machine, a stalled escalator, a pigeon that owns the platform — and ask what would happen if it turned out to be extraordinary." },
-  { id: "time-travel", name: "Time-travel this spot", instruction: "Picture exactly where you're standing a hundred years ago, then a hundred years from now. Someone else was waiting here too, once. Someone else will be." },
-  { id: "walk", name: "Walk", instruction: "Take a route your feet already know by heart, then ask it to surprise you. Familiar places keep rewriting themselves for anyone willing to look twice." },
-  { id: "daydream", name: "Daydream", instruction: "You've got a few unclaimed minutes — hand them to your mind and see where it takes you. No destination required." },
-  { id: "remember", name: "Remember", instruction: "Let a memory rise on its own terms, uninvited. Don't interrogate it — just watch where it wants to take you." },
+  {
+    id: "drift", name: "Watch it drift",
+    instruction: "Find something that moves without needing you — clouds, a ceiling fan, steam off your cup, leaves, rain on a window. Think of the long, still shots of sky and laundry lines in Ozu's films: nothing happens, and that's the point. Just let your eyes rest on it.",
+    why: "Gentle, slow-moving things hold attention without effort — what researchers call soft fascination. Because they ask so little of you, they leave room for thought to wander and reflect.",
+    source: "Kaplan, Attention Restoration Theory",
+  },
+  {
+    id: "walk", name: "Walk nowhere",
+    instruction: "Walk without a destination, like a flâneur, or like Virginia Woolf crossing London at dusk on the excuse of buying a pencil. Pick turns by whim. If you're stuck in transit, walk the length of the platform and back.",
+    why: "In a set of Stanford experiments, walking lifted creative idea generation for most people compared to sitting — indoors or out — and the boost lingered after they sat back down.",
+    source: "Oppezzo & Schwartz, 2014",
+  },
+  {
+    id: "song", name: "Song rewind",
+    instruction: "Put on a song you loved years ago — one you haven't played in a long time. Don't do anything else. Let it take you wherever it was when you first heard it: a room, a season, a person.",
+    why: "Familiar music lights up the medial prefrontal cortex, a hub that binds sound, emotion and your own life story — which is why a song can pull a whole memory back in seconds.",
+    source: "Janata, 2009",
+  },
+  {
+    id: "scent", name: "Follow a scent",
+    instruction: "Find a smell — coffee, rain on dust, a book's pages, soap, your own sleeve. Breathe it slowly. Like Proust's madeleine dipped in tea, let it unlock whatever it wants to. Don't chase the memory; wait for it.",
+    why: "Smell has an unusually direct line to the brain's memory and emotion regions, which is why scent-triggered memories tend to arrive vivid and whole rather than as facts.",
+    source: "Olfactory–limbic memory research",
+  },
+  {
+    id: "dull", name: "Do the dull thing",
+    instruction: "Wash a few dishes, fold laundry, water plants, sort a drawer, or stand in the queue without your phone. Do it slowly. Don't try to think about anything — the task is only there to keep your hands busy.",
+    why: "People who did a simple, undemanding task during a break came back more creative than those who rested, worked hard, or took no break. The easy task freed the mind to wander.",
+    source: "Baird et al., 2012",
+  },
+  {
+    id: "window", name: "Window seat",
+    instruction: "If you're on a bus, train or in a car, watch the world scroll past without naming anything. If you're not moving, sit by any window. Let buildings, trees and strangers slide through your view like a film you're not required to follow.",
+    why: "A moving view pairs soft fascination with an undemanding task — two conditions strongly linked to mind wandering. It's why ideas so often show up on commutes.",
+    source: "Kaplan; Baird et al.",
+  },
+  {
+    id: "vast", name: "Feel small",
+    instruction: "Find the biggest thing you can see — the sky, the horizon, a tall tree, the sea, a night full of stars. Like the opening of Carl Sagan's Pale Blue Dot, zoom out until your day looks tiny inside it. Stay there a while.",
+    why: "Awe — the feeling of facing something vast — can quiet the chatter of the self and widen your frame. The research is promising but still debated, so treat this one as an experiment.",
+    source: "Keltner; Piff et al., 2015",
+  },
+  {
+    id: "tomorrow", name: "Invent a tomorrow",
+    instruction: "Take three real pieces of your life — a place you know, a person, something you want — and rearrange them into a scene that hasn't happened yet. Where are you? What's the light like? What happens next?",
+    why: "Imagining the future uses the same brain network as remembering. The hippocampus recombines fragments of real memories into new scenes — imagination is memory, rearranged.",
+    source: "Schacter & Addis, constructive simulation",
+  },
 ];
-const DO_NOTHING = { id: "do-nothing", name: "Do nothing", instruction: "Set the phone face-down and do nothing at all. Boredom is where the mind finally starts talking to itself." };
+const MORE_ACTIVITIES = [
+  {
+    id: "birds", name: "Birdsong",
+    instruction: "Stop wherever you are and listen for birds — a crow on a wire, sparrows in a hedge, a koel before the heat, pigeons on a ledge. Try to count how many different voices there are. Don't name them. Just follow one song until it ends.",
+    why: "In interviews, bird songs and calls were the natural sound people most often linked to recovering from stress and mental fatigue. A later smartphone study of over a thousand people found that everyday moments of seeing or hearing birds were followed by lasting lifts in wellbeing.",
+    source: "Ratcliffe et al., 2013; Hammoud et al., 2022",
+  },
+  {
+    id: "sunrise", name: "First light",
+    instruction: "Be awake for the sunrise, or catch the earliest light you can. Watch the sky change colour before the sun appears. Notice the first sounds of the day switching on — a door, a bird, a kettle, traffic waking up.",
+    why: "Awe comes from meeting something vast that you can't immediately take in. In an eight-week study, people who took short walks aimed at noticing awe felt more joy, more warmth toward others, and less daily distress than people who walked normally.",
+    source: "Sturm, Keltner et al., 2020",
+  },
+  {
+    id: "sunset", name: "Watch the sunset",
+    instruction: "Find a window, rooftop, platform or road facing west. Stay for the whole thing — not just the orange, but the blue after. Watch the colours stop being colours. Let the day end without you doing anything about it.",
+    why: "Slow gradients of light hold attention without effort (soft fascination), and a wide sky invites the 'small self' feeling of awe — a sense of proportion between you and the world that researchers could even see in people's photos over time.",
+    source: "Kaplan; Sturm, Keltner et al., 2020",
+  },
+  {
+    id: "wind", name: "Wind in the leaves",
+    instruction: "Find a tree, a curtain, long grass, a flag, anything the wind moves. Watch how it never repeats. Listen to the hiss of leaves getting louder and softer. Let your breathing fall into whatever rhythm it has.",
+    why: "Leaves rustling is one of the textbook examples of soft fascination — movement that captures attention gently, without draining it, leaving space for the mind to drift and reflect.",
+    source: "Kaplan, Attention Restoration Theory",
+  },
+  {
+    id: "water", name: "Listen to water",
+    instruction: "Find running water — a tap, a fountain, rain on a roof, waves, a kettle starting to boil. Close your eyes and follow the sound as if it were music with no beginning and no end.",
+    why: "Flowing water and falling rain are classic sources of soft fascination: they hold attention gently without draining it, giving tired, focused attention a chance to recover and the mind room to roam.",
+    source: "Kaplan, Attention Restoration Theory",
+  },
+  {
+    id: "photos", name: "Old photographs",
+    instruction: "Scroll back years in your photos, or open an old album — stop on one picture that tugs at you. Who took it? What happened just before? What were you worried about then that doesn't matter now?",
+    why: "Across four experiments, feeling nostalgic made people write more creatively, and the effect ran through a boost in openness to experience — beyond simply being in a good mood.",
+    source: "van Tilburg, Sedikides & Wildschut, 2015",
+  },
+  {
+    id: "origin", name: "Where did it come from?",
+    instruction: "Pick any object near you — your shoe, a coin, the tea in your cup, the seat you're on. Follow it backwards: who made it, where its materials grew or were dug up, how many hands it passed through to reach you. Don't look it up. Just wonder.",
+    why: "When curiosity is switched on, the brain's reward circuitry lights up and couples with the hippocampus — and people remember more, even about unrelated things they encounter in that state.",
+    source: "Gruber, Gelman & Ranganath, 2014",
+  },
+  {
+    id: "routine", name: "Break a routine",
+    instruction: "Do one ordinary thing the wrong way round. Get off a stop early, take the other staircase, eat breakfast for dinner, brush your teeth with the other hand. Notice what feels strange.",
+    why: "Actively experiencing something unexpected — even a sandwich made in an unusual order — increased cognitive flexibility compared to doing the normal version or just watching someone else do it.",
+    source: "Ritter et al., 2012",
+  },
+];
+const ALL_ACTIVITIES = [...DEFAULT_ACTIVITIES, ...MORE_ACTIVITIES];
+
+/* ---- today's four: a fresh, seeded set each day; shuffle deals the next four ---- */
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+}
+function seededRandom(seedStr) {
+  let h = 1779033703 ^ seedStr.length;
+  for (let i = 0; i < seedStr.length; i++) {
+    h = Math.imul(h ^ seedStr.charCodeAt(i), 3432918353);
+    h = (h << 13) | (h >>> 19);
+  }
+  return function () {
+    h = Math.imul(h ^ (h >>> 16), 2246822507);
+    h = Math.imul(h ^ (h >>> 13), 3266489909);
+    h ^= h >>> 16;
+    return (h >>> 0) / 4294967296;
+  };
+}
+function seededShuffle(list, seedStr) {
+  const rand = seededRandom(seedStr);
+  const arr = [...list];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+/* Each "deck" is the whole list shuffled; we deal it out four at a time,
+   so shuffling never repeats a cue until every cue has been seen once. */
+function dealFour(day, count) {
+  const perDeck = Math.floor(ALL_ACTIVITIES.length / 4);
+  const deckIndex = Math.floor(count / perDeck);
+  const hand = count % perDeck;
+  const deck = seededShuffle(ALL_ACTIVITIES, `${day}#${deckIndex}`);
+  return deck.slice(hand * 4, hand * 4 + 4);
+}
+/* Kept at module level so the shuffle position survives leaving and returning
+   to the compass within a session; resets automatically on a new day. */
+let shuffleState = { day: todayKey(), count: 0 };
+const DO_NOTHING = {
+  id: "do-nothing", name: "Do nothing",
+  instruction: "Set the phone face-down and do nothing at all. When boredom arrives, don't escape it. Wait on the other side of it.",
+  why: "People who sat through a genuinely boring task afterwards came up with more creative ideas — and the more passive the boredom, the stronger the effect.",
+  source: "Mann & Cadman, 2014",
+};
 const DIRECT = { id: "direct", name: "Direct capture", instruction: "" };
 
 const DURATIONS = [
@@ -78,6 +208,7 @@ function mergeData(existing, incoming) {
     connections: mergeById(existing.connections, incoming.connections),
     constellations: mergeById(existing.constellations, incoming.constellations),
     customActivities: mergeById(existing.customActivities, incoming.customActivities),
+    moonPos: existing.moonPos || incoming.moonPos,
   };
 }
 
@@ -99,6 +230,84 @@ async function safeSet(key, value) {
     return false;
   }
 }
+
+const MAX_PHOTOS = 12;
+/* Older stars stored a single photoId; newer ones keep a list. */
+function starPhotoIds(s) {
+  if (!s) return [];
+  if (Array.isArray(s.photoIds)) return s.photoIds;
+  return s.photoId ? [s.photoId] : [];
+}
+
+/* MEDIA-START — voice notes and photos live in IndexedDB, which has far more room than
+   localStorage. Each item is a data URL stored under its own id; stars only keep the id. */
+function openMediaDb() {
+  return new Promise((resolve, reject) => {
+    const req = indexedDB.open("constellate-media", 1);
+    req.onupgradeneeded = () => req.result.createObjectStore("media");
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  });
+}
+async function mediaGet(id) {
+  try {
+    const db = await openMediaDb();
+    return await new Promise((resolve) => {
+      const q = db.transaction("media", "readonly").objectStore("media").get(id);
+      q.onsuccess = () => resolve(q.result || null);
+      q.onerror = () => resolve(null);
+    });
+  } catch (e) {
+    return null;
+  }
+}
+async function mediaSet(id, value) {
+  try {
+    const db = await openMediaDb();
+    return await new Promise((resolve) => {
+      const tx = db.transaction("media", "readwrite");
+      tx.objectStore("media").put(value, id);
+      tx.oncomplete = () => resolve(true);
+      tx.onerror = () => resolve(false);
+      tx.onabort = () => resolve(false);
+    });
+  } catch (e) {
+    return false;
+  }
+}
+async function mediaDelete(id) {
+  try {
+    const db = await openMediaDb();
+    await new Promise((resolve) => {
+      const tx = db.transaction("media", "readwrite");
+      tx.objectStore("media").delete(id);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => resolve();
+    });
+  } catch (e) {}
+}
+/* MEDIA-END */
+
+/* Shrinks a photo to at most 1280px on its long side and re-encodes it as JPEG,
+   so a phone photo drops from several MB to roughly 100–250 KB. */
+function compressImage(file, max = 1280, quality = 0.72) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, max / Math.max(img.width, img.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL("image/jpeg", quality));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("unreadable image")); };
+    img.src = url;
+  });
+}
+
 
 /* ---------- geometry helpers for constellation boundaries ---------- */
 function convexHull(points) {
@@ -172,6 +381,7 @@ function ConstellateApp() {
   const [toast, setToast] = useState(null);
 
   const [selectedActivity, setSelectedActivity] = useState(null);
+  const [hubOrigin, setHubOrigin] = useState("landing"); // "landing" | "sky" — where Compass/Create-star/Return send you back to
   const [selectedDuration, setSelectedDuration] = useState(null);
   const [sessionSeconds, setSessionSeconds] = useState(null);
 
@@ -189,7 +399,7 @@ function ConstellateApp() {
       const link = document.createElement("link");
       link.id = "constellate-fonts";
       link.rel = "stylesheet";
-      link.href = "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap";
+      link.href = "https://fonts.googleapis.com/css2?family=Open+Sans:wght@300;400;600&family=Josefin+Sans:wght@400;500;600&family=Roboto:wght@300;400;500&display=swap";
       document.head.appendChild(link);
     }
     (async () => {
@@ -217,7 +427,7 @@ function ConstellateApp() {
     const raw = await safeGet(userKey(name));
     setData(raw ? JSON.parse(raw) : emptyData());
     setCurrentUser(name);
-    setScreen("sky");
+    setScreen("landing");
   }
 
   function logout() {
@@ -235,9 +445,26 @@ function ConstellateApp() {
     [currentUser]
   );
 
+  // Like persist, but works from the latest state — safe to call after awaiting media writes.
+  function persistWith(fn) {
+    setData((prev) => {
+      const next = fn(prev);
+      if (currentUser) safeSet(userKey(currentUser), JSON.stringify(next));
+      return next;
+    });
+  }
+
   /* ---- backup: export to a downloadable file, import/merge from one ---- */
-  function exportBackup() {
-    const payload = { app: "constellate", version: 1, user: currentUser, exportedAt: Date.now(), data };
+  async function exportBackup() {
+    const media = {};
+    for (const s of data.stars) {
+      const ids = [s.audioId, ...starPhotoIds(s)].filter(Boolean);
+      for (const id of ids) {
+        const value = await mediaGet(id);
+        if (value) media[id] = value;
+      }
+    }
+    const payload = { app: "constellate", version: 2, user: currentUser, exportedAt: Date.now(), data, media };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const dateStr = new Date().toISOString().slice(0, 10);
@@ -255,11 +482,14 @@ function ConstellateApp() {
   function importBackupFile(file) {
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
       try {
         const parsed = JSON.parse(reader.result);
         const incoming = parsed && parsed.data ? parsed.data : parsed;
         if (!incoming || !Array.isArray(incoming.stars)) throw new Error("bad shape");
+        if (parsed.media) {
+          for (const [id, value] of Object.entries(parsed.media)) await mediaSet(id, value);
+        }
         const before = data.stars.length;
         const merged = mergeData(data, incoming);
         persist(merged);
@@ -273,24 +503,87 @@ function ConstellateApp() {
   }
 
   /* ---- star / connection / constellation mutations ---- */
-  function addStar({ name, content, activityName }) {
+  function addStar({ name, content, activityName, extra = {} }) {
     const jitter = () => Math.floor(Math.random() * 360 - 180);
+    const fallbackName = content.trim() ? "untitled" : extra.audioId ? "voice note" : extra.photoIds && extra.photoIds.length ? "photos" : "untitled";
     const star = {
       id: uid(),
-      name: name.trim() || "Untitled",
+      name: name.trim() || fallbackName,
       content: content.trim(),
       activity: activityName || "Direct capture",
       date: Date.now(),
       x: jitter(),
       y: jitter(),
+      ...extra,
     };
-    persist({ ...data, stars: [...data.stars, star] });
+    persistWith((prev) => ({ ...prev, stars: [...prev.stars, star] }));
     return star;
+  }
+
+  async function saveStarWithMedia({ name, content, activityName, audio, photos = [] }) {
+    const extra = {};
+    let failed = false;
+    if (audio) {
+      const id = uid();
+      if (await mediaSet(id, audio)) extra.audioId = id; else failed = true;
+    }
+    if (photos.length) {
+      extra.photoIds = [];
+      for (const p of photos) {
+        const id = uid();
+        if (await mediaSet(id, p.src)) extra.photoIds.push(id); else failed = true;
+      }
+    }
+    addStar({ name, content, activityName, extra });
+    showToast(failed ? "star saved — but some of the recording or photos couldn't be stored" : "star saved");
+  }
+
+  async function addStarPhotos(starId, srcs) {
+    const newIds = [];
+    for (const src of srcs) {
+      const id = uid();
+      if (await mediaSet(id, src)) newIds.push(id);
+    }
+    if (newIds.length < srcs.length) showToast("some photos couldn't be stored on this device");
+    persistWith((prev) => ({
+      ...prev,
+      stars: prev.stars.map((s) =>
+        s.id === starId ? { ...s, photoId: null, photoIds: [...starPhotoIds(s), ...newIds] } : s
+      ),
+    }));
+  }
+  async function removeStarPhoto(starId, photoId) {
+    await mediaDelete(photoId);
+    persistWith((prev) => ({
+      ...prev,
+      stars: prev.stars.map((s) =>
+        s.id === starId ? { ...s, photoId: null, photoIds: starPhotoIds(s).filter((p) => p !== photoId) } : s
+      ),
+    }));
+  }
+
+  async function setStarMedia(starId, kind, value) {
+    const key = "audioId";
+    const star = data.stars.find((s) => s.id === starId);
+    if (!star) return;
+    if (star[key]) await mediaDelete(star[key]);
+    let newId = null;
+    if (value) {
+      const id = uid();
+      if (await mediaSet(id, value)) newId = id;
+      else showToast("that couldn't be stored on this device");
+    }
+    persistWith((prev) => ({ ...prev, stars: prev.stars.map((s) => (s.id === starId ? { ...s, [key]: newId } : s)) }));
   }
   function updateStar(id, patch) {
     persist({ ...data, stars: data.stars.map((s) => (s.id === id ? { ...s, ...patch } : s)) });
   }
   function deleteStar(id) {
+    const doomed = data.stars.find((s) => s.id === id);
+    if (doomed) {
+      if (doomed.audioId) mediaDelete(doomed.audioId);
+      starPhotoIds(doomed).forEach((pid) => mediaDelete(pid));
+    }
     persist({
       ...data,
       stars: data.stars.filter((s) => s.id !== id),
@@ -306,7 +599,7 @@ function ConstellateApp() {
       (c) => (c.source === source && c.target === target) || (c.source === target && c.target === source)
     );
     if (exists) return showToast("Already connected");
-    persist({ ...data, connections: [...data.connections, { id: uid(), source, target }] });
+    persist({ ...data, connections: [...data.connections, { id: uid(), source, target, date: Date.now() }] });
     showToast("Connected");
   }
   function removeConnection(id) {
@@ -314,7 +607,7 @@ function ConstellateApp() {
     showToast("Connection removed");
   }
   function createConstellation(name, members) {
-    const c = { id: uid(), name: name.trim() || "Untitled constellation", members };
+    const c = { id: uid(), name: name.trim() || "untitled constellation", members, date: Date.now() };
     persist({ ...data, constellations: [...data.constellations, c] });
     showToast("Constellation created");
   }
@@ -338,7 +631,7 @@ function ConstellateApp() {
     setScreen("activity");
   }
   function surpriseMe() {
-    const pool = [...DEFAULT_ACTIVITIES, DO_NOTHING, ...data.customActivities];
+    const pool = [...ALL_ACTIVITIES, DO_NOTHING, ...data.customActivities];
     const pick = pool[Math.floor(Math.random() * pool.length)];
     beginActivity(pick);
   }
@@ -380,6 +673,21 @@ function ConstellateApp() {
 
       {screen === "login" && <LoginScreen usersList={usersList} onLogin={loginAs} />}
 
+      {screen === "landing" && currentUser && (
+        <LandingScreen
+          onWander={() => {
+            setHubOrigin("landing");
+            setScreen("compass");
+          }}
+          onAddIdea={() => {
+            setHubOrigin("landing");
+            setSelectedActivity(null);
+            setScreen("createStar");
+          }}
+          onSky={() => setScreen("sky")}
+        />
+      )}
+
       {screen === "home" && currentUser && (
         <SettingsScreen
           user={currentUser}
@@ -396,7 +704,7 @@ function ConstellateApp() {
           customActivities={data.customActivities}
           onPick={beginActivity}
           onSurprise={surpriseMe}
-          onHome={() => setScreen("sky")}
+          onHome={() => setScreen(hubOrigin)}
           onAddActivity={() => setShowAddActivity(true)}
         />
       )}
@@ -425,7 +733,7 @@ function ConstellateApp() {
           onMakeStar={() => setScreen("createStar")}
           onNothing={() => {
             showToast("That's alright. Wander again anytime.");
-            setScreen("sky");
+            setScreen(hubOrigin);
           }}
         />
       )}
@@ -433,11 +741,13 @@ function ConstellateApp() {
       {screen === "createStar" && (
         <CreateStarScreen
           activityName={selectedActivity ? selectedActivity.name : null}
-          onCancel={() => setScreen(selectedActivity ? "return" : "sky")}
-          onSave={(name, content) => {
-            addStar({ name, content, activityName: selectedActivity ? selectedActivity.name : "Direct capture" });
+          onCancel={() => setScreen(selectedActivity ? "return" : hubOrigin)}
+          onSave={async ({ name, content, audio, photos }) => {
+            await saveStarWithMedia({
+              name, content, audio, photos,
+              activityName: selectedActivity ? selectedActivity.name : "Direct capture",
+            });
             setSelectedActivity(null);
-            showToast("Star saved");
             setScreen("sky");
           }}
         />
@@ -462,12 +772,30 @@ function ConstellateApp() {
           onLink={addConnection}
           onRemoveConnection={removeConnection}
           onSettings={() => setScreen("home")}
-          onWander={() => setScreen("compass")}
+          onWander={() => {
+            setHubOrigin("sky");
+            setScreen("compass");
+          }}
           onAddIdea={() => {
+            setHubOrigin("sky");
             setSelectedActivity(null);
             setScreen("createStar");
           }}
           onConstellate={() => setShowConstellateModal(true)}
+          onCalendar={() => setScreen("calendar")}
+          moonPos={data.moonPos}
+          onMoveMoon={(pos) => persist({ ...data, moonPos: pos })}
+        />
+      )}
+
+      {screen === "calendar" && (
+        <CalendarScreen
+          stars={data.stars}
+          connections={data.connections}
+          constellations={data.constellations}
+          onBack={() => setScreen("sky")}
+          onOpenStar={setOpenStarId}
+          onOpenConstellation={setOpenConstellationId}
         />
       )}
 
@@ -477,6 +805,9 @@ function ConstellateApp() {
           onClose={() => setOpenStarId(null)}
           onRename={(name) => updateStar(openStarId, { name })}
           onEdit={(content) => updateStar(openStarId, { content })}
+          onSetMedia={(kind, value) => setStarMedia(openStarId, kind, value)}
+          onAddPhotos={(srcs) => addStarPhotos(openStarId, srcs)}
+          onRemovePhoto={(pid) => removeStarPhoto(openStarId, pid)}
           onDelete={() => {
             deleteStar(openStarId);
             setOpenStarId(null);
@@ -541,10 +872,10 @@ function ConstellateApp() {
 
 /* ============================== Shell / Style ============================== */
 
-function Shell({ children, full }) {
+function Shell({ children, full, plain }) {
   return (
-    <div className={`constellate-root${full ? " full" : ""}`}>
-      <BackgroundSky />
+    <div className={`constellate-root${full ? " full" : ""}${plain ? " plain" : ""}`}>
+      {!plain && <BackgroundSky />}
       <div style={{ position: "relative", zIndex: 1, display: "flex", flexDirection: "column", flex: 1, minHeight: 0, width: "100%" }}>
         {children}
       </div>
@@ -555,13 +886,13 @@ function Shell({ children, full }) {
 function BackgroundSky() {
   const stars = React.useMemo(
     () =>
-      Array.from({ length: 140 }).map(() => ({
+      Array.from({ length: 60 }).map(() => ({
         x: Math.random() * 100,
         y: Math.random() * 100,
         r: Math.random() * 1.3 + 0.35,
         delay: Math.random() * 8,
         dur: 3.5 + Math.random() * 5,
-        op: 0.25 + Math.random() * 0.55,
+        op: 0.18 + Math.random() * 0.42,
       })),
     []
   );
@@ -577,7 +908,7 @@ function BackgroundSky() {
             cx={`${s.x}%`}
             cy={`${s.y}%`}
             r={s.r}
-            fill="#f4efe4"
+            fill="#dbe6f5"
             style={{
               opacity: s.op,
               animation: `twinkle ${s.dur}s ease-in-out ${s.delay}s infinite`,
@@ -593,23 +924,26 @@ function Style() {
   return (
     <style>{`
       .constellate-root {
-        --void: #0a0b12;
-        --void-soft: #12141f;
-        --panel: #171a2b;
-        --star: #f4efe4;
-        --star-dim: #8890a6;
-        --gold: #c9a868;
-        --gold-soft: rgba(201,168,104,0.16);
-        --line: #545e86;
-        --text: #e7e5dd;
-        --text-muted: #8890a6;
+        --void: #080b16;
+        --void-soft: #0e1424;
+        --panel: #131a2e;
+        --star: #dbe6f5;
+        --star-dim: #7c8db0;
+        --gold: #5ec8ff;
+        --gold-soft: rgba(94,200,255,0.16);
+        --line: #3d4d6b;
+        --text: #dbe6f5;
+        --text-muted: #7c8db0;
         --danger: #c97b6b;
-        --font-display: 'Fraunces', Georgia, serif;
-        --font-body: 'Inter', system-ui, -apple-system, sans-serif;
+        --star-connect: #f0c452;
+        --font-display: 'Open Sans', system-ui, sans-serif;
+        --font-soft: 'Josefin Sans', system-ui, sans-serif;
+        --font-body: 'Roboto', system-ui, -apple-system, sans-serif;
 
-        background: radial-gradient(ellipse 120% 70% at 50% -10%, #1c2040 0%, #12142380 42%, var(--void) 78%);
+        background: radial-gradient(ellipse 120% 70% at 50% -10%, #16233f 0%, #0e142480 42%, var(--void) 78%);
         color: var(--text);
         font-family: var(--font-body);
+        text-transform: lowercase;
         min-height: 100vh;
         min-height: 100dvh;
         width: 100%;
@@ -624,33 +958,41 @@ function Style() {
         overscroll-behavior: none;
       }
       .constellate-root input,
+      .constellate-root textarea,
+      .constellate-root .user-text { text-transform: none; }
+      .constellate-root input::placeholder,
+      .constellate-root textarea::placeholder { text-transform: lowercase; }
+      .constellate-root input,
       .constellate-root textarea {
         -webkit-user-select: text;
         user-select: text;
         -webkit-touch-callout: default;
       }
 
+      .constellate-root.plain {
+        background: radial-gradient(ellipse 110% 80% at 50% 38%, #1d3260 0%, #11204a 45%, #0a1430 100%);
+      }
       .bg-layer { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
       .bg-stars { position: absolute; inset: 0; width: 100%; height: 100%; }
       @keyframes twinkle { 0%, 100% { opacity: 0.15; } 50% { opacity: 1; } }
 
       .bg-nebula {
         position: absolute; border-radius: 50%; filter: blur(60px);
-        opacity: 0.4; mix-blend-mode: screen;
+        opacity: 0.28; mix-blend-mode: screen;
       }
       .bg-nebula-a {
         width: 62vmax; height: 62vmax; top: -18vmax; left: -14vmax;
-        background: radial-gradient(circle, #3a3577 0%, transparent 70%);
+        background: radial-gradient(circle, #1f3a63 0%, transparent 70%);
         animation: drift-a 46s ease-in-out infinite alternate;
       }
       .bg-nebula-b {
         width: 54vmax; height: 54vmax; bottom: -20vmax; right: -16vmax;
-        background: radial-gradient(circle, #2c4a63 0%, transparent 70%);
+        background: radial-gradient(circle, #16324a 0%, transparent 70%);
         animation: drift-b 58s ease-in-out infinite alternate;
       }
       .bg-nebula-c {
         width: 44vmax; height: 44vmax; top: 32%; left: 58%;
-        background: radial-gradient(circle, #4a3160 0%, transparent 72%);
+        background: radial-gradient(circle, #24316b 0%, transparent 72%);
         animation: drift-c 52s ease-in-out infinite alternate;
       }
       @keyframes drift-a { from { transform: translate(0,0) scale(1); } to { transform: translate(4vmax,3vmax) scale(1.08); } }
@@ -664,6 +1006,7 @@ function Style() {
         font-family: inherit; color: inherit;
       }
       :where(.constellate-root button) {
+        text-transform: inherit;
         background: none; border: none; cursor: pointer; -webkit-tap-highlight-color: transparent;
       }
       .constellate-root button:focus-visible,
@@ -692,32 +1035,37 @@ function Style() {
       @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
 
       .kicker { font-size: 13px; color: var(--text-muted); letter-spacing: 0.02em; }
-      h1.display { font-family: var(--font-display); font-weight: 500; font-size: 34px; line-height: 1.15; margin: 0; color: var(--star); }
-      h2.display { font-family: var(--font-display); font-weight: 500; font-size: 24px; line-height: 1.25; margin: 0; color: var(--star); }
+      h1.display { font-family: var(--font-display); font-weight: 300; font-size: 34px; line-height: 1.15; margin: 0; color: var(--star); }
+      h2.display { font-family: var(--font-display); font-weight: 300; font-size: 24px; line-height: 1.25; margin: 0; color: var(--star); }
+      .hero-statement {
+        font-family: var(--font-display); font-weight: 300; text-transform: lowercase;
+        letter-spacing: 0.03em; line-height: 1.3; color: var(--star-dim); margin: 0;
+      }
+      .soft-statement { font-family: var(--font-soft); font-weight: 500; color: var(--text); margin: 0; }
       p.body { font-size: 16px; line-height: 1.6; color: var(--text); margin: 0; }
       p.muted { font-size: 14px; line-height: 1.6; color: var(--text-muted); margin: 0; }
 
       .bracket-btn {
         font-family: var(--font-body); font-size: 15px; font-weight: 500;
-        color: var(--star); padding: 13px 22px; border: 1px solid rgba(244,239,228,0.28);
+        color: var(--star); padding: 13px 22px; border: 1px solid rgba(219,230,245,0.28);
         border-radius: 999px; transition: border-color .2s, background .2s;
         min-height: 46px;
       }
       .bracket-btn:hover { border-color: var(--gold); }
-      .bracket-btn.primary { background: var(--gold); border-color: var(--gold); color: #14151f; font-weight: 600; }
-      .bracket-btn.primary:hover { background: #d8ba7c; }
+      .bracket-btn.primary { background: var(--gold); border-color: var(--gold); color: #0a1120; font-weight: 600; }
+      .bracket-btn.primary:hover { background: #8ad4ff; }
       .bracket-btn.danger { border-color: rgba(201,123,107,0.5); color: var(--danger); }
       .bracket-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
       .text-link {
         font-size: 14px; color: var(--text-muted); text-decoration: underline;
-        text-underline-offset: 3px; text-decoration-color: rgba(136,144,166,0.4);
+        text-underline-offset: 3px; text-decoration-color: rgba(124,141,176,0.4);
         padding: 8px 2px;
       }
       .text-link:hover { color: var(--star); text-decoration-color: var(--gold); }
 
       input.field, textarea.field {
-        width: 100%; background: transparent; border: none; border-bottom: 1px solid rgba(244,239,228,0.22);
+        width: 100%; background: transparent; border: none; border-bottom: 1px solid rgba(219,230,245,0.22);
         padding: 10px 2px; font-size: 17px; color: var(--star); resize: none;
       }
       input.field::placeholder, textarea.field::placeholder { color: var(--text-muted); }
@@ -729,7 +1077,7 @@ function Style() {
 
       .toast {
         position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%);
-        background: var(--panel); border: 1px solid rgba(201,168,104,0.35);
+        background: var(--panel); border: 1px solid rgba(94,200,255,0.35);
         color: var(--star); font-size: 14px; padding: 11px 20px; border-radius: 999px;
         z-index: 200; animation: fade-in .25s ease both;
       }
@@ -737,7 +1085,7 @@ function Style() {
       /* ---- login ---- */
       .user-chip-row { display: flex; flex-wrap: wrap; gap: 10px; }
       .user-chip {
-        border: 1px solid rgba(244,239,228,0.22); border-radius: 999px; padding: 10px 18px;
+        border: 1px solid rgba(219,230,245,0.22); border-radius: 999px; padding: 10px 18px;
         font-size: 14px; color: var(--star-dim);
       }
       .user-chip:hover { border-color: var(--gold); color: var(--star); }
@@ -752,16 +1100,26 @@ function Style() {
       .compass-node {
         position: absolute; transform: translate(-50%,-50%);
         width: clamp(60px, 19vw, 88px); height: clamp(60px, 19vw, 88px); border-radius: 50%;
-        border: 1px solid rgba(244,239,228,0.22);
+        border: 1px solid rgba(219,230,245,0.22);
         display: flex; align-items: center; justify-content: center; text-align: center;
         font-size: clamp(11px, 3.4vw, 13.5px); color: var(--star-dim); padding: 6px; line-height: 1.15;
         transition: border-color .2s, color .2s, background .2s;
-        background: rgba(23,26,43,0.4);
+        background: rgba(19,26,46,0.4);
       }
+      .compass-four .compass-node {
+        width: clamp(96px, 30vw, 124px); height: clamp(96px, 30vw, 124px); padding: 10px;
+        transition: opacity .22s ease, transform .22s ease, border-color .2s, color .2s, background .2s;
+      }
+      .compass-four.dealing .compass-node { opacity: 0; transform: translate(-50%,-50%) scale(0.85); }
+      .shuffle-btn {
+        font-family: var(--font-soft); font-size: 14px; color: var(--gold);
+        border: 1px solid rgba(94,200,255,0.35); border-radius: 999px; padding: 10px 18px; min-height: 42px;
+      }
+      .shuffle-btn:hover { background: var(--gold-soft); }
       .compass-node:hover, .compass-node:active { border-color: var(--gold); color: var(--star); background: var(--gold-soft); }
       .compass-extra-row { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; max-width: 380px; }
       .compass-chip {
-        border: 1px solid rgba(244,239,228,0.18); border-radius: 999px; padding: 10px 14px;
+        border: 1px solid rgba(219,230,245,0.18); border-radius: 999px; padding: 10px 14px;
         font-size: 13px; color: var(--star-dim); min-height: 40px;
       }
       .compass-chip:hover { border-color: var(--gold); color: var(--star); }
@@ -773,18 +1131,91 @@ function Style() {
         gap: 36px; padding: calc(32px + env(safe-area-inset-top)) 32px calc(32px + env(safe-area-inset-bottom)); text-align: center;
       }
       .wander-clock { font-family: var(--font-display); font-size: 42px; color: var(--star-dim); letter-spacing: 0.02em; }
-      .wander-word { font-family: var(--font-display); font-size: 26px; color: var(--star); }
+      .wander-word { font-family: var(--font-soft); font-weight: 500; font-size: 26px; color: var(--star); }
 
       .duration-row { display: flex; flex-wrap: wrap; gap: 10px; }
       .duration-btn {
-        border: 1px solid rgba(244,239,228,0.22); border-radius: 999px; padding: 10px 16px; font-size: 14px; color: var(--star-dim);
+        border: 1px solid rgba(219,230,245,0.22); border-radius: 999px; padding: 10px 16px; font-size: 14px; color: var(--star-dim);
         min-height: 40px;
       }
       .duration-btn.active { border-color: var(--gold); color: var(--gold); background: var(--gold-soft); }
 
+      /* ---- voice notes & photos ---- */
+      .media-editor { display: flex; flex-direction: column; gap: 12px; width: 100%; }
+      .media-row { display: flex; flex-wrap: wrap; gap: 10px; }
+      .media-control { display: flex; flex-direction: column; gap: 6px; }
+      .media-btn {
+        font-size: 13.5px; color: var(--star); min-height: 40px; padding: 9px 16px;
+        border: 1px solid rgba(219,230,245,0.24); border-radius: 999px;
+        display: inline-flex; align-items: center; gap: 8px;
+      }
+      .media-btn:hover { border-color: var(--gold); }
+      .media-btn:disabled { opacity: 0.5; }
+      .media-btn.recording { border-color: #e2716a; color: #f3b0ab; }
+      .rec-dot { width: 9px; height: 9px; border-radius: 50%; background: #e2716a; animation: pulse 1.2s ease-in-out infinite; }
+      .media-item { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; width: 100%; }
+      .media-photo { width: 100%; max-height: 240px; object-fit: cover; border-radius: 14px; }
+      .photo-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%; }
+      .photo-cell { position: relative; aspect-ratio: 1; }
+      .photo-thumb { width: 100%; height: 100%; padding: 0; border-radius: 12px; overflow: hidden; display: block; }
+      .photo-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+      .photo-remove {
+        position: absolute; top: 5px; right: 5px; width: 26px; height: 26px; border-radius: 50%;
+        background: rgba(8,11,22,0.78); color: var(--star); font-size: 16px; line-height: 1;
+        display: flex; align-items: center; justify-content: center;
+      }
+      .photo-lightbox {
+        position: fixed; inset: 0; z-index: 300; background: rgba(5,8,15,0.94);
+        display: flex; align-items: center; justify-content: center; padding: 20px; cursor: zoom-out;
+      }
+      .photo-lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 10px; }
+      .media-audio { width: 100%; height: 40px; }
+
+      /* ---- why this works ---- */
+      .why-box {
+        border-left: 2px solid var(--gold); padding: 4px 0 4px 14px;
+        display: flex; flex-direction: column; gap: 4px;
+      }
+      .why-label { font-family: var(--font-soft); font-size: 12px; color: var(--gold); margin: 0; letter-spacing: 0.02em; }
+      .why-text { font-size: 14px; line-height: 1.55; color: var(--text); margin: 0; }
+      .why-source { font-size: 11.5px; color: var(--text-muted); margin: 0; font-style: italic; }
+
+      /* ---- calendar / wander log ---- */
+      .cal-nav { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+      .cal-month-label { font-size: 14px; color: var(--star); font-weight: 500; }
+      .cal-grid {
+        display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; width: 100%;
+      }
+      .cal-dow-cell {
+        text-align: center; font-size: 11px; color: var(--text-muted); padding-bottom: 4px;
+      }
+      .cal-cell {
+        aspect-ratio: 1; border-radius: 12px; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; gap: 2px;
+        font-size: 13px; color: var(--text-muted); border: 1px solid transparent;
+      }
+      .cal-cell-empty { visibility: hidden; }
+      .cal-cell.has-stars { color: var(--star); background: rgba(94,200,255,0.08); }
+      .cal-cell.today { border-color: var(--gold); }
+      .cal-cell.selected { background: var(--gold-soft); border-color: var(--gold); }
+      .cal-star { font-size: 8px; color: var(--gold); line-height: 1; }
+      .cal-star-row-mini { display: flex; flex-wrap: wrap; justify-content: center; gap: 1px; max-width: 100%; }
+      .cal-star-gold { color: var(--star-connect); }
+      .cal-star-gold-text { color: var(--star-connect); }
+      .cal-day-panel {
+        width: 100%; display: flex; flex-direction: column; gap: 4px;
+        border-top: 1px solid rgba(219,230,245,0.1); padding-top: 14px;
+      }
+      .cal-star-row {
+        display: flex; align-items: center; justify-content: space-between; gap: 10px;
+        width: 100%; text-align: left; padding: 10px 4px;
+        border-bottom: 1px solid rgba(219,230,245,0.08); font-size: 14px; color: var(--text);
+      }
+      .cal-star-row:hover { color: var(--gold); }
+
       /* ---- settings ---- */
       .backup-section {
-        border-top: 1px solid rgba(244,239,228,0.1); padding-top: 18px;
+        border-top: 1px solid rgba(219,230,245,0.1); padding-top: 18px;
         display: flex; flex-direction: column; gap: 10px;
       }
       .backup-row { display: flex; flex-wrap: wrap; gap: 16px; }
@@ -795,11 +1226,11 @@ function Style() {
       .sky-topbar {
         display: flex; flex-direction: column; gap: 8px;
         padding: calc(12px + env(safe-area-inset-top)) 14px 10px; z-index: 20;
-        background: linear-gradient(to bottom, rgba(10,11,18,0.94), rgba(10,11,18,0));
+        background: linear-gradient(to bottom, rgba(8,11,22,0.94), rgba(8,11,22,0));
         position: absolute; top: 0; left: 0; right: 0;
       }
       .sky-topbar-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap; }
-      .sky-modes { display: flex; gap: 3px; background: rgba(23,26,43,0.7); border: 1px solid rgba(244,239,228,0.14); border-radius: 999px; padding: 3px; }
+      .sky-modes { display: flex; gap: 3px; background: rgba(19,26,46,0.7); border: 1px solid rgba(219,230,245,0.14); border-radius: 999px; padding: 3px; }
       .sky-mode-btn { font-size: 12px; padding: 9px 10px; border-radius: 999px; color: var(--text-muted); min-height: 38px; }
       .sky-mode-btn.active { background: var(--gold-soft); color: var(--gold); }
       .sky-hint {
@@ -813,24 +1244,36 @@ function Style() {
         display: flex; flex-direction: column; align-items: center; gap: 12px; z-index: 20;
       }
       .wander-cta {
-        padding: 18px 46px; font-size: 17px; font-weight: 700; letter-spacing: 0.01em;
-        border-radius: 999px; background: var(--gold); color: #14151f; border: 1px solid var(--gold);
-        min-height: 56px; white-space: nowrap;
-        animation: wander-glow 3.2s ease-in-out infinite;
+        width: 96px; height: 96px; border-radius: 50%; padding: 0; flex-shrink: 0;
+        display: flex; align-items: center; justify-content: center;
+        background:
+          radial-gradient(circle, rgba(8,16,32,0.72) 0%, rgba(40,95,170,0.4) 62%, rgba(40,95,170,0.15) 100%),
+          url(data:image/jpeg;base64,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) center/cover no-repeat;
+        color: #ffffff; font-family: var(--font-soft); font-weight: 600; font-size: 15px; letter-spacing: 0.01em;
+        text-shadow: 0 1px 5px rgba(0,0,0,0.7), 0 0 14px rgba(0,0,0,0.4);
+        border: 1px solid rgba(94,200,255,0.4);
       }
-      .wander-cta:hover { background: #d8ba7c; }
-      @keyframes wander-glow {
-        0%, 100% { box-shadow: 0 0 16px 2px rgba(201,168,104,0.32); }
-        50% { box-shadow: 0 0 30px 7px rgba(201,168,104,0.58); }
-      }
+      .wander-cta:hover { filter: brightness(1.15); }
       .add-idea-link { font-size: 13px; }
+      .moon-anchor {
+        position: fixed; transform: translate(-50%, -50%); z-index: 30;
+        display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center;
+      }
+      .moon-anchor, .moon-anchor .wander-cta { touch-action: none; }
+      .moon-anchor .wander-cta { cursor: grab; transition: transform .15s ease, filter .15s; }
+      .moon-anchor .wander-cta.dragging { cursor: grabbing; transform: scale(1.06); filter: brightness(1.1); }
+      .moon-hint { font-size: 11.5px; color: var(--text-muted); margin: 0; max-width: 200px; }
+      .landing-sky-link {
+        position: fixed; left: 50%; transform: translateX(-50%); z-index: 20;
+        bottom: calc(34px + env(safe-area-inset-bottom));
+      }
       .sky-zoom {
         position: absolute; bottom: calc(24px + env(safe-area-inset-bottom)); right: 16px;
         display: flex; flex-direction: column; gap: 8px; z-index: 20;
       }
       .zoom-btn {
-        width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(244,239,228,0.2);
-        background: rgba(23,26,43,0.75); color: var(--star-dim); font-size: 18px;
+        width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(219,230,245,0.2);
+        background: rgba(19,26,46,0.75); color: var(--star-dim); font-size: 18px;
       }
       .sky-empty {
         position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -843,32 +1286,32 @@ function Style() {
 
       /* ---- modals ---- */
       .modal-backdrop {
-        position: fixed; inset: 0; background: rgba(6,7,12,0.72); z-index: 100;
+        position: fixed; inset: 0; background: rgba(5,8,15,0.72); z-index: 100;
         display: flex; align-items: flex-end; justify-content: center;
         animation: fade-in .2s ease both;
       }
       @media (min-width: 560px) { .modal-backdrop { align-items: center; } }
       .modal-sheet {
-        background: var(--panel); border: 1px solid rgba(244,239,228,0.1); border-bottom: none;
+        background: var(--panel); border: 1px solid rgba(219,230,245,0.1); border-bottom: none;
         border-radius: 20px 20px 0 0; width: 100%; max-width: 460px;
         padding: 26px 24px calc(28px + env(safe-area-inset-bottom));
         display: flex; flex-direction: column; gap: 16px; max-height: 86vh; max-height: 86dvh; overflow-y: auto;
         animation: rise .25s ease both;
       }
-      @media (min-width: 560px) { .modal-sheet { border-radius: 20px; border-bottom: 1px solid rgba(244,239,228,0.1); } }
+      @media (min-width: 560px) { .modal-sheet { border-radius: 20px; border-bottom: 1px solid rgba(219,230,245,0.1); } }
       @keyframes rise { from { transform: translateY(24px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
       .modal-row { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
       .modal-meta { font-size: 12.5px; color: var(--text-muted); }
       .editable-field {
         display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
         width: 100%; text-align: left; padding: 12px 4px;
-        border-bottom: 1px dashed rgba(244,239,228,0.22);
+        border-bottom: 1px dashed rgba(219,230,245,0.22);
       }
       .editable-field:hover, .editable-field:active { border-bottom-color: var(--gold); }
       .editable-field .edit-icon { font-size: 13px; color: var(--text-muted); flex-shrink: 0; margin-top: 4px; }
       .editable-field:hover .edit-icon { color: var(--gold); }
       .edit-field-group { display: flex; flex-direction: column; gap: 8px; }
-      .member-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px solid rgba(244,239,228,0.08); }
+      .member-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px solid rgba(219,230,245,0.08); }
       .member-row button.name-btn { font-size: 14.5px; color: var(--text); text-align: left; }
       .member-row button.name-btn:hover { color: var(--gold); }
       .x-btn { color: var(--text-muted); font-size: 13px; padding: 8px 6px; }
@@ -884,15 +1327,14 @@ function LoginScreen({ usersList, onLogin }) {
   return (
     <div className="column">
       <div className="kicker">Constellate</div>
-      <h1 className="display">Wander freely.
-Connect unexpectedly.</h1>
+      <h1 className="hero-statement" style={{ fontSize: 28 }}>Wander freely. Connect unexpectedly.</h1>
+      <p className="soft-statement" style={{ fontSize: 21 }}>Give your mind somewhere to go.</p>
       <p className="body">A quiet space for thoughts that usually disappear. Enter a name to open your sky, or start a new one.</p>
-      <p className="muted">Your sky is saved in this browser only — it won't follow you to another device.</p>
 
       {usersList.length > 0 && (
         <div className="user-chip-row">
           {usersList.map((u) => (
-            <button key={u} className="user-chip" onClick={() => onLogin(u)}>
+            <button key={u} className="user-chip user-text" onClick={() => onLogin(u)}>
               {u}
             </button>
           ))}
@@ -914,6 +1356,97 @@ Connect unexpectedly.</h1>
         <button className="bracket-btn primary" style={{ alignSelf: "flex-start" }} onClick={() => onLogin(name)} disabled={!name.trim()}>
           [ Enter ]
         </button>
+        <p className="muted">Your sky is saved in this browser only — it won't follow you to another device.</p>
+      </div>
+    </div>
+  );
+}
+
+/* The moon can be dragged anywhere; a short tap still opens wander.
+   Position is stored as fractions of the screen so it adapts to any device. */
+function MoonAnchor({ pos, defaultPos, onMove, onWander, onAddIdea, showHint }) {
+  const [livePos, setLivePos] = useState(null);
+  const drag = useRef(null);
+  const lastPos = useRef(null);
+  const suppressClick = useRef(false);
+  const moonRef = useRef(null);
+  const p = livePos || pos || defaultPos;
+
+  // Mobile browsers (iOS Safari especially) can hijack a drag as a scroll and cancel it.
+  // A native, non-passive touchmove listener lets us block that while the moon is held.
+  useEffect(() => {
+    const el = moonRef.current;
+    if (!el) return;
+    const block = (ev) => { if (drag.current) ev.preventDefault(); };
+    el.addEventListener("touchmove", block, { passive: false });
+    return () => el.removeEventListener("touchmove", block);
+  }, []);
+
+  function finishDrag() {
+    const d = drag.current;
+    drag.current = null;
+    if (d && d.moved && lastPos.current) {
+      suppressClick.current = true;
+      onMove(lastPos.current);
+    }
+    lastPos.current = null;
+    setLivePos(null);
+  }
+
+  function clampPos(clientX, clientY) {
+    const w = window.innerWidth, h = window.innerHeight;
+    const x = clamp(clientX, 60, w - 60) / w;
+    const y = clamp(clientY, 110, h - 100) / h;
+    return { x, y };
+  }
+  function onPointerDown(e) {
+    drag.current = { id: e.pointerId, sx: e.clientX, sy: e.clientY, moved: false };
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) {}
+  }
+  function onPointerMove(e) {
+    const d = drag.current;
+    if (!d || d.id !== e.pointerId) return;
+    if (!d.moved && Math.hypot(e.clientX - d.sx, e.clientY - d.sy) < 8) return;
+    d.moved = true;
+    const next = clampPos(e.clientX, e.clientY);
+    lastPos.current = next;
+    setLivePos(next);
+  }
+  function onPointerUp(e) {
+    const d = drag.current;
+    if (!d || d.id !== e.pointerId) return;
+    if (d.moved) lastPos.current = clampPos(e.clientX, e.clientY);
+    finishDrag();
+  }
+  return (
+    <div className="moon-anchor" style={{ left: `${p.x * 100}%`, top: `${p.y * 100}%` }}>
+      <button
+        ref={moonRef}
+        className={`wander-cta${livePos ? " dragging" : ""}`}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={finishDrag}
+        onClick={() => {
+          if (suppressClick.current) { suppressClick.current = false; return; }
+          onWander();
+        }}
+      >
+        wander
+      </button>
+      <button className="text-link add-idea-link" onClick={onAddIdea}>or add an idea</button>
+      {showHint && <p className="moon-hint">hold and drag the moon to place it anywhere</p>}
+    </div>
+  );
+}
+
+function LandingScreen({ onWander, onAddIdea, onSky }) {
+  return (
+    <div className="column" style={{ alignItems: "center", textAlign: "center" }}>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 10 }}>
+        <button className="wander-cta" onClick={onWander}>wander</button>
+        <button className="text-link add-idea-link" onClick={onAddIdea}>or add an idea</button>
+        <button className="text-link" style={{ marginTop: 6 }} onClick={onSky}>sky</button>
       </div>
     </div>
   );
@@ -965,21 +1498,38 @@ function SettingsScreen({ user, starCount, onBackToSky, onLogout, onExport, onIm
 }
 
 function CompassScreen({ customActivities, onPick, onSurprise, onHome, onAddActivity }) {
-  const n = DEFAULT_ACTIVITIES.length;
+  const day = todayKey();
+  if (shuffleState.day !== day) shuffleState = { day, count: 0 };
+  const [count, setCount] = useState(shuffleState.count);
+  const [dealing, setDealing] = useState(false);
+  const activities = dealFour(day, count);
+  const n = activities.length;
+
+  function shuffle() {
+    setDealing(true);
+    setTimeout(() => {
+      const next = count + 1;
+      shuffleState = { day, count: next };
+      setCount(next);
+      setDealing(false);
+    }, 220);
+  }
+
   return (
     <div className="column">
-      <button className="text-link" style={{ alignSelf: "flex-start" }} onClick={onHome}>← Sky</button>
+      <button className="text-link" style={{ alignSelf: "flex-start" }} onClick={onHome}>← Back</button>
+      <div className="kicker" style={{ textAlign: "center" }}>{count === 0 ? "today's four" : "four more"}</div>
       <h2 className="display" style={{ textAlign: "center" }}>Where do you want to wander?</h2>
       <p className="muted" style={{ textAlign: "center" }}>Good for a commute, a queue, a waiting room — any pocket of time that's yours.</p>
       <div className="compass-wrap">
-        <div className="compass-wheel">
+        <div className={`compass-wheel compass-four${dealing ? " dealing" : ""}`}>
           <div className="compass-center">✦</div>
-          {DEFAULT_ACTIVITIES.map((a, i) => {
+          {activities.map((a, i) => {
             const angle = (-90 + (360 / n) * i) * (Math.PI / 180);
-            const r = 38;
+            const r = 34;
             const left = 50 + r * Math.cos(angle);
             const top = 50 + r * Math.sin(angle);
-            const fontSize = a.name.length > 15 ? "clamp(9.5px, 2.7vw, 11px)" : a.name.length > 9 ? "clamp(10.5px, 3vw, 12.5px)" : "clamp(11px, 3.4vw, 13.5px)";
+            const fontSize = a.name.length > 15 ? "clamp(11px, 3.1vw, 13px)" : "clamp(12.5px, 3.6vw, 15px)";
             return (
               <button
                 key={a.id}
@@ -993,6 +1543,8 @@ function CompassScreen({ customActivities, onPick, onSurprise, onHome, onAddActi
           })}
         </div>
 
+        <button className="shuffle-btn" onClick={shuffle}>↻ shuffle for four new ways</button>
+
         <div className="compass-links">
           <button className="text-link" onClick={() => onPick(DO_NOTHING)}>Do nothing</button>
           <button className="text-link" onClick={onSurprise}>✨ Surprise me</button>
@@ -1002,7 +1554,7 @@ function CompassScreen({ customActivities, onPick, onSurprise, onHome, onAddActi
         {customActivities.length > 0 && (
           <div className="compass-extra-row">
             {customActivities.map((a) => (
-              <button key={a.id} className="compass-chip" onClick={() => onPick(a)}>
+              <button key={a.id} className="compass-chip user-text" onClick={() => onPick(a)}>
                 {a.name}
               </button>
             ))}
@@ -1019,6 +1571,13 @@ function ActivityScreen({ activity, selectedDuration, onSelectDuration, onBegin,
       <button className="text-link" style={{ alignSelf: "flex-start" }} onClick={onBack}>← Choose differently</button>
       <div className="kicker">{activity.name}</div>
       <p className="body" style={{ fontSize: 18 }}>{activity.instruction}</p>
+      {activity.why && (
+        <div className="why-box">
+          <p className="why-label">why this works</p>
+          <p className="why-text">{activity.why}</p>
+          {activity.source && <p className="why-source">{activity.source}</p>}
+        </div>
+      )}
 
       <div>
         <p className="muted" style={{ marginBottom: 10 }}>How long?</p>
@@ -1064,32 +1623,230 @@ function ReturnScreen({ onMakeStar, onNothing }) {
   );
 }
 
+/* ============================== Voice notes & photos ============================== */
+
+const MAX_RECORDING_SECONDS = 120;
+
+function VoiceRecorder({ onRecorded }) {
+  const [recording, setRecording] = useState(false);
+  const [secs, setSecs] = useState(0);
+  const [error, setError] = useState("");
+  const [hitLimit, setHitLimit] = useState(false);
+  const recRef = useRef(null);
+  const mounted = useRef(true);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      const r = recRef.current;
+      if (r && r.mr.state === "recording") r.mr.stop();
+      if (r) r.stream.getTracks().forEach((t) => t.stop());
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!recording) return;
+    const t = setInterval(() => setSecs((s) => s + 1), 1000);
+    return () => clearInterval(t);
+  }, [recording]);
+
+  useEffect(() => {
+    if (recording && secs >= MAX_RECORDING_SECONDS) { setHitLimit(true); stop(); }
+  }, [secs, recording]);
+
+  async function start() {
+    setError("");
+    setHitLimit(false);
+    if (!navigator.mediaDevices || !window.MediaRecorder) {
+      setError("voice notes aren't supported in this browser.");
+      return;
+    }
+    let stream;
+    try {
+      // Ask for the phone's built-in voice clean-up: echo cancellation, background-noise
+      // suppression and automatic level, recorded in mono at full speech sample rate.
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          channelCount: 1,
+          sampleRate: 48000,
+        },
+      });
+    } catch (e) {
+      setError("couldn't open the microphone — check this site's microphone permission.");
+      return;
+    }
+    const type = ["audio/webm;codecs=opus", "audio/mp4", "audio/webm", "audio/ogg"].find(
+      (t) => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)
+    );
+    // Opus (Chrome, Firefox, Android) is very clear at 64 kbps; AAC in mp4 (iPhone Safari)
+    // needs more to sound as good. Roughly 0.5–0.75 MB per minute.
+    const bitrate = type && type.includes("mp4") ? 96000 : 64000;
+    let mr;
+    try {
+      mr = new MediaRecorder(stream, type ? { mimeType: type, audioBitsPerSecond: bitrate } : { audioBitsPerSecond: bitrate });
+    } catch (e) {
+      mr = new MediaRecorder(stream);
+    }
+    const chunks = [];
+    mr.ondataavailable = (e) => { if (e.data && e.data.size) chunks.push(e.data); };
+    mr.onstop = () => {
+      stream.getTracks().forEach((t) => t.stop());
+      recRef.current = null;
+      const blob = new Blob(chunks, { type: mr.mimeType || type || "audio/webm" });
+      const reader = new FileReader();
+      reader.onload = () => { if (mounted.current) onRecorded(reader.result); };
+      reader.readAsDataURL(blob);
+      if (mounted.current) setRecording(false);
+    };
+    recRef.current = { mr, stream };
+    mr.start();
+    setSecs(0);
+    setRecording(true);
+  }
+
+  function stop() {
+    const r = recRef.current;
+    if (r && r.mr.state === "recording") r.mr.stop();
+  }
+
+  return (
+    <div className="media-control">
+      {recording ? (
+        <button className="media-btn recording" onClick={stop}>
+          <span className="rec-dot" /> {fmtClock(secs)} / {fmtClock(MAX_RECORDING_SECONDS)} · tap to stop
+        </button>
+      ) : (
+        <button className="media-btn" onClick={start}>record a voice note</button>
+      )}
+      <p className="modal-meta">{hitLimit ? "stopped at 2 minutes — voice notes can be up to 2 minutes long." : "voice notes can be up to 2 minutes long."}</p>
+      {error && <p className="modal-meta">{error}</p>}
+    </div>
+  );
+}
+
+function PhotoPicker({ onPicked, remaining }) {
+  const inputRef = useRef(null);
+  const [progress, setProgress] = useState(null); // null | { done, total }
+  const [error, setError] = useState("");
+  return (
+    <div className="media-control">
+      <button className="media-btn" disabled={!!progress} onClick={() => inputRef.current && inputRef.current.click()}>
+        {progress ? `preparing ${progress.done + 1} of ${progress.total}…` : "add photos"}
+      </button>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        style={{ display: "none" }}
+        onChange={async (e) => {
+          const all = Array.from(e.target.files || []);
+          e.target.value = "";
+          if (!all.length) return;
+          const files = all.slice(0, remaining);
+          setError(all.length > remaining ? `only ${remaining} more photo${remaining === 1 ? "" : "s"} fit on this star.` : "");
+          const out = [];
+          for (let i = 0; i < files.length; i++) {
+            setProgress({ done: i, total: files.length });
+            try { out.push(await compressImage(files[i])); } catch (err) { setError("one of those images couldn't be read."); }
+          }
+          setProgress(null);
+          if (out.length) onPicked(out);
+        }}
+      />
+      {error && <p className="modal-meta">{error}</p>}
+    </div>
+  );
+}
+
+/* Shows whatever is attached and lets people add or remove each piece.
+   photos: [{ id, src }] */
+function MediaEditor({ audio, photos, onAudio, onAddPhotos, onRemovePhoto }) {
+  const [viewing, setViewing] = useState(null);
+  const remaining = MAX_PHOTOS - photos.length;
+  return (
+    <div className="media-editor">
+      {photos.length > 0 && (
+        <div className="photo-grid">
+          {photos.map((p) => (
+            <div className="photo-cell" key={p.id}>
+              <button className="photo-thumb" onClick={() => setViewing(p.src)}>
+                <img src={p.src} alt="" />
+              </button>
+              <button className="photo-remove" aria-label="remove photo" onClick={() => onRemovePhoto(p.id)}>×</button>
+            </div>
+          ))}
+        </div>
+      )}
+      {audio && (
+        <div className="media-item">
+          <audio src={audio} controls preload="metadata" className="media-audio" />
+          <button className="text-link" onClick={() => onAudio(null)}>remove voice note</button>
+        </div>
+      )}
+      {(!audio || remaining > 0) && (
+        <div className="media-row">
+          {!audio && <VoiceRecorder onRecorded={onAudio} />}
+          {remaining > 0 && <PhotoPicker onPicked={onAddPhotos} remaining={remaining} />}
+        </div>
+      )}
+      {viewing && (
+        <div className="photo-lightbox" onClick={() => setViewing(null)}>
+          <img src={viewing} alt="" />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function CreateStarScreen({ activityName, onCancel, onSave }) {
   const [content, setContent] = useState("");
   const [name, setName] = useState("");
+  const [audio, setAudio] = useState(null);
+  const [photos, setPhotos] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const canSave = (content.trim() || audio || photos.length) && !saving;
   return (
-    <div className="column">
-      <button className="text-link" style={{ alignSelf: "flex-start" }} onClick={onCancel}>← Back</button>
-      <h2 className="display">What did you find?</h2>
+    <div className="column" style={{ justifyContent: "flex-start" }}>
+      <button className="text-link" style={{ alignSelf: "flex-start" }} onClick={onCancel}>← back</button>
+      <h2 className="display">what did you find?</h2>
       <textarea
         className="field"
         rows={4}
-        autoFocus
-        placeholder="Your thought, question, or observation…"
+        placeholder="your thought, question, or observation…"
         value={content}
         onChange={(e) => setContent(e.target.value)}
       />
+      <MediaEditor
+        audio={audio}
+        photos={photos}
+        onAudio={setAudio}
+        onAddPhotos={(srcs) => setPhotos((ps) => [...ps, ...srcs.map((s) => ({ id: uid(), src: s }))])}
+        onRemovePhoto={(id) => setPhotos((ps) => ps.filter((p) => p.id !== id))}
+      />
       <input
         className="field"
-        placeholder="Name your star (optional)"
+        placeholder="name your star (optional)"
         value={name}
         onChange={(e) => setName(e.target.value)}
       />
       <p className="modal-meta">
-        {activityName ? `Wandered: ${activityName} · ${fmtDate(Date.now())}` : `Captured directly · ${fmtDate(Date.now())}`}
+        {activityName ? `wandered: ${activityName} · ${fmtDate(Date.now())}` : `captured directly · ${fmtDate(Date.now())}`}
       </p>
-      <button className="bracket-btn primary" style={{ alignSelf: "flex-start" }} disabled={!content.trim()} onClick={() => onSave(name, content)}>
-        [ Save star ]
+      <button
+        className="bracket-btn primary"
+        style={{ alignSelf: "flex-start" }}
+        disabled={!canSave}
+        onClick={async () => {
+          setSaving(true);
+          await onSave({ name, content, audio, photos });
+        }}
+      >
+        {saving ? "saving…" : "[ save star ]"}
       </button>
     </div>
   );
@@ -1100,7 +1857,7 @@ function CreateStarScreen({ activityName, onCancel, onSave }) {
 function SkyScreen({
   data, mode, setMode, linkFirst, setLinkFirst, groupSelection, setGroupSelection,
   onOpenStar, onOpenConstellation, onMoveStar, onLink, onRemoveConnection,
-  onSettings, onWander, onAddIdea, onConstellate,
+  onSettings, onWander, onAddIdea, onConstellate, onCalendar, moonPos, onMoveMoon,
 }) {
   const svgRef = useRef(null);
   const [view, setView] = useState({ scale: 1, tx: 0, ty: 0 });
@@ -1203,17 +1960,17 @@ function SkyScreen({
           <button className="text-link" onClick={onSettings}>Data actions</button>
           <div className="sky-modes">
             {[
-              ["open", "Open"],
-              ["move", "Move"],
-              ["link", "Link"],
-              ["group", "Group"],
+              ["open", "open"],
+              ["move", "move"],
+              ["link", "link"],
+              ["group", "group"],
             ].map(([key, label]) => (
               <button key={key} className={`sky-mode-btn${mode === key ? " active" : ""}`} onClick={() => setMode(key)}>
                 {label}
               </button>
             ))}
           </div>
-          <div style={{ width: 68 }} />
+          <button className="text-link" onClick={onCalendar}>Log</button>
         </div>
         <div className="sky-hint">{hint}</div>
       </div>
@@ -1248,11 +2005,11 @@ function SkyScreen({
             return (
               <g key={c.id} style={{ pointerEvents: mode === "open" ? "all" : "none" }} onClick={() => onOpenConstellation(c.id)}>
                 {b.path ? (
-                  <path d={b.path} fill="var(--gold-soft)" stroke="rgba(201,168,104,0.5)" strokeWidth={1.2} />
+                  <path d={b.path} fill="var(--gold-soft)" stroke="rgba(94,200,255,0.5)" strokeWidth={1.2} />
                 ) : (
-                  <circle cx={b.circle.cx} cy={b.circle.cy} r={b.circle.r} fill="var(--gold-soft)" stroke="rgba(201,168,104,0.5)" strokeWidth={1.2} />
+                  <circle cx={b.circle.cx} cy={b.circle.cy} r={b.circle.r} fill="var(--gold-soft)" stroke="rgba(94,200,255,0.5)" strokeWidth={1.2} />
                 )}
-                <text x={b.cx} y={b.path ? b.cy : b.circle.cy - b.circle.r - 12} textAnchor="middle" fontFamily="var(--font-display)" fontSize={15} fill="var(--gold)" style={{ pointerEvents: "none" }}>
+                <text x={b.cx} y={b.path ? b.cy : b.circle.cy - b.circle.r - 12} textAnchor="middle" fontFamily="var(--font-display)" fontSize={15} fill="var(--gold)" className="user-text" style={{ pointerEvents: "none" }}>
                   {c.name}
                 </text>
               </g>
@@ -1286,7 +2043,7 @@ function SkyScreen({
               >
                 {selected && <circle r={17} fill="none" stroke="var(--gold)" strokeWidth={1.5} />}
                 <circle r={7} fill="var(--star)" filter="url(#glow)" opacity={0.95} />
-                <text y={26} textAnchor="middle" fontSize={12} fill="var(--star-dim)" fontFamily="var(--font-body)">
+                <text y={26} textAnchor="middle" fontSize={12} fill="var(--star-dim)" fontFamily="var(--font-body)" className="user-text">
                   {s.name.length > 20 ? s.name.slice(0, 19) + "…" : s.name}
                 </text>
               </g>
@@ -1304,10 +2061,14 @@ function SkyScreen({
       )}
 
       {mode === "open" && (
-        <div className="sky-actions">
-          <button className="wander-cta" onClick={onWander}>Wander</button>
-          <button className="text-link add-idea-link" onClick={onAddIdea}>or add an idea</button>
-        </div>
+        <MoonAnchor
+          pos={moonPos}
+          defaultPos={{ x: 0.5, y: 0.78 }}
+          onMove={onMoveMoon}
+          onWander={onWander}
+          onAddIdea={onAddIdea}
+          showHint={!moonPos}
+        />
       )}
 
       <div className="sky-zoom">
@@ -1327,6 +2088,158 @@ function SkyScreen({
   );
 }
 
+/* ============================== Calendar / wander log ============================== */
+
+function CalendarScreen({ stars, connections, constellations, onBack, onOpenStar, onOpenConstellation }) {
+  const [viewDate, setViewDate] = useState(() => {
+    const d = new Date();
+    d.setDate(1);
+    return d;
+  });
+  const [selectedDay, setSelectedDay] = useState(null);
+
+  const year = viewDate.getFullYear();
+  const month = viewDate.getMonth();
+  const monthLabel = viewDate.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+  const firstDow = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  function keyFor(timestamp) {
+    const d = new Date(timestamp);
+    return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  }
+
+  const starsByDay = useMemo(() => {
+    const map = {};
+    for (const s of stars) (map[keyFor(s.date)] = map[keyFor(s.date)] || []).push(s);
+    return map;
+  }, [stars]);
+
+  const constellationsByDay = useMemo(() => {
+    const map = {};
+    for (const c of constellations) {
+      if (!c.date) continue;
+      (map[keyFor(c.date)] = map[keyFor(c.date)] || []).push(c);
+    }
+    return map;
+  }, [constellations]);
+
+  const connectionCountByDay = useMemo(() => {
+    const map = {};
+    for (const c of connections) {
+      if (!c.date) continue;
+      const k = keyFor(c.date);
+      map[k] = (map[k] || 0) + 1;
+    }
+    return map;
+  }, [connections]);
+
+  function dayKey(d) {
+    return `${year}-${month}-${d}`;
+  }
+  function hasConnectEvent(d) {
+    const k = dayKey(d);
+    return !!constellationsByDay[k] || !!connectionCountByDay[k];
+  }
+  const today = new Date();
+  function isToday(d) {
+    return d === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+  }
+
+  let monthStarCount = 0, monthConstellationCount = 0;
+  for (let d = 1; d <= daysInMonth; d++) {
+    monthStarCount += (starsByDay[dayKey(d)] || []).length;
+    monthConstellationCount += (constellationsByDay[dayKey(d)] || []).length;
+  }
+
+  const cells = [];
+  for (let i = 0; i < firstDow; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  const selectedStars = selectedDay ? starsByDay[dayKey(selectedDay)] || [] : [];
+  const selectedConstellations = selectedDay ? constellationsByDay[dayKey(selectedDay)] || [] : [];
+  const selectedConnectionCount = selectedDay ? connectionCountByDay[dayKey(selectedDay)] || 0 : 0;
+
+  const summary = monthStarCount === 0
+    ? "No stars yet this month."
+    : `${monthStarCount} star${monthStarCount === 1 ? "" : "s"}` +
+      (monthConstellationCount > 0 ? ` · ${monthConstellationCount} constellation${monthConstellationCount === 1 ? "" : "s"} formed` : "") +
+      " this month.";
+
+  return (
+    <div className="column" style={{ justifyContent: "flex-start" }}>
+      <button className="text-link" style={{ alignSelf: "flex-start" }} onClick={onBack}>← Sky</button>
+      <h2 className="display">Your wander log</h2>
+      <p className="muted">{summary}</p>
+
+      <div className="cal-nav">
+        <button className="text-link" onClick={() => { setViewDate(new Date(year, month - 1, 1)); setSelectedDay(null); }}>‹ Prev</button>
+        <span className="cal-month-label">{monthLabel}</span>
+        <button className="text-link" onClick={() => { setViewDate(new Date(year, month + 1, 1)); setSelectedDay(null); }}>Next ›</button>
+      </div>
+
+      <div className="cal-grid">
+        {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
+          <div key={i} className="cal-dow-cell">{d}</div>
+        ))}
+        {cells.map((d, i) => {
+          if (d === null) return <div key={`empty-${i}`} className="cal-cell cal-cell-empty" />;
+          const dayStars = starsByDay[dayKey(d)] || [];
+          const connected = hasConnectEvent(d);
+          const clickable = dayStars.length > 0 || connected;
+          const selected = selectedDay === d;
+          return (
+            <button
+              key={d}
+              className={`cal-cell${dayStars.length ? " has-stars" : ""}${isToday(d) ? " today" : ""}${selected ? " selected" : ""}`}
+              onClick={() => clickable && setSelectedDay(selected ? null : d)}
+            >
+              <span className="cal-day-num">{d}</span>
+              {(dayStars.length > 0 || connected) && (
+                <span className="cal-star-row-mini">
+                  {Array.from({ length: Math.min(dayStars.length, 4) }).map((_, k) => (
+                    <span key={k} className="cal-star">✦</span>
+                  ))}
+                  {connected && <span className="cal-star cal-star-gold">✦</span>}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      {selectedDay && (
+        <div className="cal-day-panel">
+          <p className="modal-meta">
+            {new Date(year, month, selectedDay).toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}
+          </p>
+          {selectedStars.map((s) => (
+            <button key={s.id} className="cal-star-row" onClick={() => onOpenStar(s.id)}>
+              <span className="user-text">✦ {s.name}</span>
+              <span className="modal-meta">{s.activity}</span>
+            </button>
+          ))}
+          {selectedConstellations.length > 0 && (
+            <>
+              <p className="modal-meta" style={{ marginTop: 6 }}>Connected into a constellation</p>
+              {selectedConstellations.map((c) => (
+                <button key={c.id} className="cal-star-row" onClick={() => onOpenConstellation(c.id)}>
+                  <span className="cal-star-gold-text user-text">🌌 {c.name}</span>
+                </button>
+              ))}
+            </>
+          )}
+          {selectedConnectionCount > 0 && (
+            <p className="modal-meta" style={{ marginTop: 6 }}>
+              {selectedConnectionCount} connection{selectedConnectionCount === 1 ? "" : "s"} drawn between stars
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ============================== Modals ============================== */
 
 function ModalBase({ children, onClose }) {
@@ -1339,7 +2252,24 @@ function ModalBase({ children, onClose }) {
   );
 }
 
-function StarModal({ star, onClose, onRename, onEdit, onDelete, onLinkFromHere }) {
+function StarModal({ star, onClose, onRename, onEdit, onSetMedia, onAddPhotos, onRemovePhoto, onDelete, onLinkFromHere }) {
+  const [audio, setAudio] = useState(null);
+  const [photos, setPhotos] = useState([]);
+  const audioId = star ? star.audioId : null;
+  const photoKey = starPhotoIds(star).join(",");
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const a = audioId ? await mediaGet(audioId) : null;
+      const list = [];
+      for (const id of photoKey ? photoKey.split(",") : []) {
+        const src = await mediaGet(id);
+        if (src) list.push({ id, src });
+      }
+      if (!cancelled) { setAudio(a); setPhotos(list); }
+    })();
+    return () => { cancelled = true; };
+  }, [audioId, photoKey]);
   const [editingName, setEditingName] = useState(false);
   const [editingContent, setEditingContent] = useState(false);
   const [name, setName] = useState(star ? star.name : "");
@@ -1379,7 +2309,7 @@ function StarModal({ star, onClose, onRename, onEdit, onDelete, onLinkFromHere }
         </div>
       ) : (
         <button className="editable-field" onClick={() => setEditingName(true)}>
-          <h2 className="display" style={{ fontSize: 22, margin: 0 }}>✦ {star.name}</h2>
+          <h2 className="display user-text" style={{ fontSize: 22, margin: 0 }}>✦ {star.name}</h2>
           <span className="edit-icon">✎</span>
         </button>
       )}
@@ -1397,10 +2327,18 @@ function StarModal({ star, onClose, onRename, onEdit, onDelete, onLinkFromHere }
         </div>
       ) : (
         <button className="editable-field" onClick={() => setEditingContent(true)}>
-          <p className="body" style={{ margin: 0 }}>{star.content || "Add a thought…"}</p>
+          <p className={`body${star.content ? " user-text" : ""}`} style={{ margin: 0 }}>{star.content || "add a thought…"}</p>
           <span className="edit-icon">✎</span>
         </button>
       )}
+
+      <MediaEditor
+        audio={audio}
+        photos={photos}
+        onAudio={(v) => { setAudio(v); onSetMedia("audio", v); }}
+        onAddPhotos={(srcs) => onAddPhotos(srcs)}
+        onRemovePhoto={(id) => { setPhotos((ps) => ps.filter((p) => p.id !== id)); onRemovePhoto(id); }}
+      />
 
       <p className="modal-meta">{star.activity} · {fmtDate(star.date)}</p>
 
@@ -1438,14 +2376,14 @@ function ConstellationModal({ constellation, stars, onClose, onRename, onRemoveS
           onBlur={() => { onRename(name); setEditingName(false); }} />
       ) : (
         <button className="editable-field" onClick={() => setEditingName(true)}>
-          <h2 className="display" style={{ fontSize: 22, margin: 0 }}>🌌 {constellation.name}</h2>
+          <h2 className="display user-text" style={{ fontSize: 22, margin: 0 }}>🌌 {constellation.name}</h2>
           <span className="edit-icon">✎</span>
         </button>
       )}
       <div>
         {members.map((s) => (
           <div className="member-row" key={s.id}>
-            <button className="name-btn" onClick={() => onOpenStar(s.id)}>✦ {s.name}</button>
+            <button className="name-btn user-text" onClick={() => onOpenStar(s.id)}>✦ {s.name}</button>
             <button className="x-btn" onClick={() => onRemoveStar(s.id)}>remove</button>
           </div>
         ))}
